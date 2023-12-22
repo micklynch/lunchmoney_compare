@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "lunchmoney"
+version = "0.1.0"
+description = ""
+authors = ["Michael Lynch <michael.lynch1@providence.org>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.1.4"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.27.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
