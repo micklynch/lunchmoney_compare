@@ -22,7 +22,7 @@ headers = {
 today = pd.to_datetime('today')
 start_of_this_month = today.replace(day=1)
 end_of_previous_month = start_of_this_month - pd.Timedelta(days=1)
-start_of_previous_month = start_of_this_month - pd.offsets.MonthBegin(1)
+start_of_previous_month = end_of_previous_month.replace(day=1)
 
 url = f"{lm_hostname}/v1/transactions"
 
@@ -71,7 +71,7 @@ last_month_df['day'] = last_month_df['date'].dt.day
 current_month_df['day'] = current_month_df['date'].dt.day
 
 # Find the proportionate cumulative spending for the last month at the same point in time
-equivalent_days_in_previous_month = math.floor((today.day / today.days_in_month) * start_of_previous_month.days_in_month)+1
+equivalent_days_in_previous_month = math.ceil((today.day / today.days_in_month) * start_of_previous_month.days_in_month)
 
 # Find the cumulative amount on the equivalent day in the last month
 cumulative_last_on_equivalent_day = last_month_df.loc[last_month_df['day'] == equivalent_days_in_previous_month, 'cumulative'].tail(1)
@@ -91,6 +91,7 @@ else:
 # Plotting
 fig, ax = plt.subplots(figsize=(10, 6))
 
+# add the overlay to explain the diff between this month and same time last month
 fig.text(0.02, 0.82, s, transform=plt.gca().transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.8))
 
 
@@ -107,7 +108,7 @@ plt.legend()
 plt.tight_layout()
 
 # Save the plot as a PNG file
-plt.savefig('cumulative_spending_comparison.png')
+plt.savefig(f"{today.strftime('%Y-%m-%d')}-cumulative_spending_comparison.png")
 
 # Close the plot
 plt.close()
