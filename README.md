@@ -14,4 +14,8 @@ You can run the code using;
 ```
 $ python comparison.py
 ```
+## Result
+The final graph looks like this -- not pretty but has all the information needed.
+<img width="500" alt="2024-03-06-cumulative_spending_comparison" src="https://github.com/micklynch/lunchmoney/assets/37063953/02f7fe2b-f09f-403d-bd03-bc4f77a33f44">
 
+* [ ] Need to align the days of the month better, currently the x-axis are the dates from the previous month. This causes slight visualization issue when months have different dates (e.g. Feb & Mar)
