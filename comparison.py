@@ -79,15 +79,15 @@ equivalent_days_in_previous_month = math.ceil((today.day / today.days_in_month) 
 cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == equivalent_days_in_previous_month, 'cumulative'].tail(1)
 this_month_total = current_month_df['cumulative'].max()
 diff = this_month_total-cumulative_amount_on_equivalent_day_last_month.values[0]
+diff = round(diff, 2)
 s = "NaN"
 if (diff > 0):
-    s = f"${this_month_total}\nYou've spent ${abs(diff)} more than you did last month"
+    s = f"Spending this month: ${this_month_total}\n${abs(diff)} more than last month"
 elif (diff < 0):
-    s = f"${this_month_total}\nYou've spent ${abs(diff)} less than you did last month"
+    s = f"Spending this month: ${this_month_total}\n${abs(diff)} less than last month"
 else:
-    s = f"${this_month_total}\nYou've spent the same as you did last month"
+    s = f"Spending this month: ${this_month_total}\nYou've spent the same as you did last month"
 print(s)
-
 # Plotting
 fig, ax = plt.subplots(figsize=(10, 6))
 
