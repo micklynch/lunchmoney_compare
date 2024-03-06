@@ -33,15 +33,17 @@ params = {
 
 response = requests.get(url, headers=headers, params=params)
 
-# sum the amount of all the transactions for the current month
+# get all the transactions for this past month and add to dataframe
 transactions = response.json()['transactions']
 current_month_df = pd.DataFrame(transactions)
 
+# format the date, amount and other flags
 current_month_df['date'] = pd.to_datetime(current_month_df['date'], format='%Y-%m-%d')
 current_month_df['amount']=current_month_df['amount'].astype(float)
 current_month_df['exclude_from_totals']=current_month_df['exclude_from_totals'].astype(bool)
 current_month_df['is_income']=current_month_df['is_income'].astype(bool)
 
+# remove items that are income or flagged to remove from totals
 current_month_df = current_month_df[(current_month_df["exclude_from_totals"] == False) & (current_month_df['is_income']== False)]
 
 params = {
@@ -51,7 +53,7 @@ params = {
 
 response = requests.get(url, headers=headers, params=params)
 
-# sum the amount of all the transactions for the current month
+# Do the same again for last month's transactions
 transactions = response.json()['transactions']
 last_month_df = pd.DataFrame(transactions)
 
@@ -74,25 +76,23 @@ current_month_df['day'] = current_month_df['date'].dt.day
 equivalent_days_in_previous_month = math.ceil((today.day / today.days_in_month) * start_of_previous_month.days_in_month)
 
 # Find the cumulative amount on the equivalent day in the last month
-cumulative_last_on_equivalent_day = last_month_df.loc[last_month_df['day'] == equivalent_days_in_previous_month, 'cumulative'].tail(1)
-
-diff = current_month_df['cumulative'].max()-cumulative_last_on_equivalent_day.values[0]
+cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == equivalent_days_in_previous_month, 'cumulative'].tail(1)
+this_month_total = current_month_df['cumulative'].max()
+diff = this_month_total-cumulative_amount_on_equivalent_day_last_month.values[0]
 s = "NaN"
 if (diff > 0):
-    s = f"You've spent ${abs(diff)} more than you did last month"
-    print(s)
+    s = f"${this_month_total}\nYou've spent ${abs(diff)} more than you did last month"
 elif (diff < 0):
-    s = f"You've spent ${abs(diff)} less than you did last month"
-    print(s)
+    s = f"${this_month_total}\nYou've spent ${abs(diff)} less than you did last month"
 else:
-    s = f"You've spent the same as you did last month"
-    print(s)
+    s = f"${this_month_total}\nYou've spent the same as you did last month"
+print(s)
 
 # Plotting
 fig, ax = plt.subplots(figsize=(10, 6))
 
 # add the overlay to explain the diff between this month and same time last month
-fig.text(0.02, 0.82, s, transform=plt.gca().transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.8))
+fig.text(0.02, 0.78, s, transform=plt.gca().transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.8))
 
 
 # Plot the cumulative spending for last month
