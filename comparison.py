@@ -94,13 +94,19 @@ nearest_day_last_month = find_nearest_available_day(last_month_df, equivalent_da
 # Find the cumulative amount on the equivalent or nearest available day in the last month
 cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == nearest_day_last_month, 'cumulative'].tail(1)
 
-# Handle the case where the equivalent day is not present
-if cumulative_amount_on_equivalent_day_last_month.empty:
+# Handle the case where there are multiple entries for the same day
+if not cumulative_amount_on_equivalent_day_last_month.empty:
+    # Take the latest cumulative amount
+    cumulative_amount_on_equivalent_day_last_month = cumulative_amount_on_equivalent_day_last_month.tail(1)
+else:
     # Fallback to the previous day
     previous_day = nearest_day_last_month - 1
-    cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == previous_day, 'cumulative'].tail(1)
+    cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == previous_day, 'cumulative']
 
-
+# Handle the case where the equivalent day is not present
+if cumulative_amount_on_equivalent_day_last_month.empty:
+    # Provide a default value (you can customize based on your requirements)
+    cumulative_amount_on_equivalent_day_last_month = pd.Series([0])
 
 this_month_total = current_month_df['cumulative'].max()
 diff = this_month_total-cumulative_amount_on_equivalent_day_last_month.values[0]
