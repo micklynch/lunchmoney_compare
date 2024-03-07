@@ -78,11 +78,30 @@ current_month_df['cumulative'] = current_month_df['amount'].cumsum()
 last_month_df['day'] = last_month_df['date'].dt.day
 current_month_df['day'] = current_month_df['date'].dt.day
 
+# Find the nearest available day in the last month
+def find_nearest_available_day(df, target_day):
+    # Find the nearest available day or fallback to the previous day
+    available_days = df['day'].unique()
+    nearest_day = min(available_days, key=lambda x: abs(x - target_day))
+    return nearest_day
+
 # Find the proportionate cumulative spending for the last month at the same point in time
 equivalent_days_in_previous_month = math.ceil((today.day / today.days_in_month) * start_of_previous_month.days_in_month)
 
-# Find the cumulative amount on the equivalent day in the last month
-cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == equivalent_days_in_previous_month, 'cumulative'].tail(1)
+# Find the nearest available day in the last month that had a payment
+nearest_day_last_month = find_nearest_available_day(last_month_df, equivalent_days_in_previous_month)
+
+# Find the cumulative amount on the equivalent or nearest available day in the last month
+cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == nearest_day_last_month, 'cumulative'].tail(1)
+
+# Handle the case where the equivalent day is not present
+if cumulative_amount_on_equivalent_day_last_month.empty:
+    # Fallback to the previous day
+    previous_day = nearest_day_last_month - 1
+    cumulative_amount_on_equivalent_day_last_month = last_month_df.loc[last_month_df['day'] == previous_day, 'cumulative'].tail(1)
+
+
+
 this_month_total = current_month_df['cumulative'].max()
 diff = this_month_total-cumulative_amount_on_equivalent_day_last_month.values[0]
 diff = round(diff, 2)
