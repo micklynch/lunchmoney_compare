@@ -26,6 +26,9 @@ start_of_previous_month = end_of_previous_month.replace(day=1)
 
 url = f"{lm_hostname}/v1/transactions"
 
+###
+# Get this month's transactions
+###
 params = {
     "start_date": start_of_this_month.strftime('%Y-%m-%d'),
     "end_date": today.strftime('%Y-%m-%d')
@@ -46,6 +49,9 @@ current_month_df['is_income']=current_month_df['is_income'].astype(bool)
 # remove items that are income or flagged to remove from totals
 current_month_df = current_month_df[(current_month_df["exclude_from_totals"] == False) & (current_month_df['is_income']== False)]
 
+###
+# Get last month's transactions
+###
 params = {
     "start_date": start_of_previous_month.strftime('%Y-%m-%d'),
     "end_date": end_of_previous_month.strftime('%Y-%m-%d')
