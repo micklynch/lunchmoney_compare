@@ -109,6 +109,7 @@ if cumulative_amount_on_equivalent_day_last_month.empty:
     cumulative_amount_on_equivalent_day_last_month = pd.Series([0])
 
 this_month_total = current_month_df['cumulative'].max()
+this_month_total = round(this_month_total, 2)
 diff = this_month_total-cumulative_amount_on_equivalent_day_last_month.values[0]
 diff = round(diff, 2)
 s = "NaN"
