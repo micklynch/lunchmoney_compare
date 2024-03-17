@@ -4,7 +4,6 @@ import requests
 import math
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.dates import MonthLocator, DateFormatter
 
 # Load the .env file
 load_dotenv()
