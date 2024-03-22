@@ -9,6 +9,16 @@ LM_HOSTNAME="https://dev.lunchmoney.app"
 ```
 You can get an API key [from lunchmoney](https://my.lunchmoney.app/developers).
 
+#### Installing dependencies
+
+It’s typically recommended to use virtual environments when working with specific applications, so:
+
+1. `python3 -m venv .venv` // create virtual environment for this directory
+2. `source .venv/bin/activate` // activate it
+3. `pip install -r requirements.txt` // install requirements
+
+All dependencies will be installed for the project; proceed.
+
 #### Running the code
 You can run the code using;
 ```
