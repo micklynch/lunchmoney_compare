@@ -4,6 +4,7 @@ import requests
 import math
 import pandas as pd
 import matplotlib.pyplot as plt
+import sys
 
 # Load the .env file
 load_dotenv()
@@ -34,9 +35,12 @@ params = {
 }
 
 response = requests.get(url, headers=headers, params=params)
-
 # get all the transactions for this past month and add to dataframe
-transactions = response.json()['transactions']
+transactions = response.json().get('transactions')
+if transactions is None:
+    print("No data this month")
+    sys.exit()
+
 current_month_df = pd.DataFrame(transactions)
 
 # format the date, amount and other flags
@@ -59,7 +63,10 @@ params = {
 response = requests.get(url, headers=headers, params=params)
 
 # Do the same again for last month's transactions
-transactions = response.json()['transactions']
+transactions = response.json().get('transactions')
+if transactions is None:
+    print("No data last month")
+    sys.exit()
 last_month_df = pd.DataFrame(transactions)
 
 last_month_df['date'] = pd.to_datetime(last_month_df['date'], format='%Y-%m-%d')
