@@ -31,9 +31,8 @@ url = f"{lm_hostname}/v1/transactions"
 ###
 params = {
     "start_date": start_of_this_month.strftime('%Y-%m-%d'),
-    "end_date": today.strftime('%Y-%m-%d')
+    "end_date": (today  + pd.Timedelta(days=1)).strftime('%Y-%m-%d') # Grab one day into the future to avoid issues with 1st of the month
 }
-
 response = requests.get(url, headers=headers, params=params)
 # get all the transactions for this past month and add to dataframe
 transactions = response.json().get('transactions')
