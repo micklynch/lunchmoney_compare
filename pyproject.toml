@@ -2,7 +2,7 @@
 name = "lunchmoney"
 version = "0.1.0"
 description = ""
-authors = ["Mick Lynch <mick.lynch@gmail.com"]
+authors = ["Mick Lynch <mick.lynch@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
