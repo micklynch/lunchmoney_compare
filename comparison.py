@@ -93,6 +93,11 @@ def find_nearest_available_day(df, target_day):
 # Find the proportionate cumulative spending for the last month at the same point in time
 equivalent_days_in_previous_month = math.ceil((today.day / today.days_in_month) * start_of_previous_month.days_in_month)
 
+# Ensure equivalent_days_in_previous_month does not exceed the number of days in the previous month
+last_month_days = start_of_previous_month.days_in_month
+if equivalent_days_in_previous_month > last_month_days:
+    equivalent_days_in_previous_month = last_month_days
+
 # Find the nearest available day in the last month that had a payment
 nearest_day_last_month = find_nearest_available_day(last_month_df, equivalent_days_in_previous_month)
 
