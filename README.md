@@ -20,12 +20,38 @@ It’s typically recommended to use virtual environments when working with speci
 All dependencies will be installed for the project; proceed.
 
 #### Running the code
-You can run the code using;
+You can run the code using:
+```bash
+python comparison.py
 ```
-$ python comparison.py
+
+The script also accepts an optional date argument to specify the reference date for the comparison. If omitted, it defaults to the current date.
+
+*   `--date` or `-d`: Specify a date in YYYY-MM-DD format.
+
+Example:
+```bash
+python comparison.py --date 2023-11-15
 ```
+
+This will generate a comparison as of November 15, 2023, comparing spending up to that day against the equivalent period in October 2023.
+
+## How it Works
+The script fetches your transactions for two periods:
+1.  The "current" period: This starts from the first day of the month of the reference date (either the date provided via `--date` or today's date if no argument is given) and includes all transactions up to and including the reference date.
+2.  The "previous" period: This covers the entire month immediately preceding the reference date's month.
+
+It then calculates cumulative spending for both periods and plots them. The comparison text ("X more/less than last month") is determined by comparing the total spending up to the reference day in the "current" period against a proportionally equivalent day in the "previous" period.
+
 ## Result
-The final graph looks like this -- not pretty but has all the information needed.
+The final graph provides a visual comparison of cumulative spending. An example is shown below (note: your specific output will vary).
+
 <img width="500" alt="2024-03-06-cumulative_spending_comparison" src="https://github.com/micklynch/lunchmoney/assets/37063953/02f7fe2b-f09f-403d-bd03-bc4f77a33f44">
 
-* [ ] Need to align the days of the month better, currently the x-axis are the dates from the previous month. This causes slight visualization issue when months have different dates (e.g. Feb & Mar)
+**Note on the plot:**
+*   The solid green line shows your spending in the current reference month up to the specified (or current) date.
+*   The dashed blue line shows your spending throughout the entire previous month.
+*   A dotted green line may also appear, showing "Projected Spending" for the remainder of the current reference month. This projection is based on transactions already made within that month that occur after the reference date.
+
+**Potential Improvements:**
+* [ ] Further refinement of x-axis alignment and labeling for clarity, especially when comparing months of different lengths.
