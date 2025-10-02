@@ -4,6 +4,7 @@ import requests
 import math
 import pandas as pd
 import matplotlib.pyplot as plt
+import mplcyberpunk
 import sys
 import argparse
 
@@ -224,22 +225,26 @@ else:
     comparison_summary_text = f"Spending this month: ${this_month_total}\nYou've spent the same as you did last month"
 print(comparison_summary_text)
 
+# Set the cyberpunk style for the plot
+plt.style.use("cyberpunk")
+
 # Plotting
 fig, ax = plt.subplots(figsize=(10, 6))
 
 # Add the overlay to explain the diff between this month and same time last month
-fig.text(0.02, 0.78, comparison_summary_text, transform=plt.gca().transAxes, fontsize=12, bbox=dict(facecolor='white', alpha=0.8))
+fig.text(0.02, 0.78, comparison_summary_text, transform=plt.gca().transAxes, fontsize=12,
+         bbox=dict(facecolor='black', alpha=0.8, edgecolor='cyan'), color='cyan')
 
 # Plot the cumulative spending for last month, if data exists
 if not last_month_df.empty and 'day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
-    ax.plot(last_month_df['day'], last_month_df['cumulative'], marker='o', label='Last Month', linestyle='--', color='blue')
+    ax.plot(last_month_df['day'], last_month_df['cumulative'], marker='o', label='Last Month', linestyle='--', color='#00ffff')
 
 # Plot the cumulative spending for current month, if data exists
 if not current_month_df.empty and 'day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
     # Plot actual spending up to input_date (solid line)
     # current_month_df is already filtered up to input_date + 1 day by get_transactions_df,
     # then its 'day' and 'cumulative' are calculated.
-    ax.plot(current_month_df['day'], current_month_df['cumulative'], marker='o', label='Current Month Spending', linestyle='-', color='green')
+    ax.plot(current_month_df['day'], current_month_df['cumulative'], marker='o', label='Current Month Spending', linestyle='-', color='#00ff00')
 
 # Plot projected spending for the rest of the month (faded line)
 if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
@@ -277,16 +282,22 @@ if not full_current_month_df.empty and 'day' in full_current_month_df.columns an
                 plot_df_for_projection = pd.concat([point_to_add, projected_line_df], ignore_index=True).sort_values(by='day').drop_duplicates(subset=['day'], keep='first')
 
 
-        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='.', label='Projected Spending (Full Month)', linestyle=':', color='darkgreen', alpha=0.7)
+        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='.', label='Projected Spending (Full Month)', linestyle=':', color='#00ff00', alpha=0.7)
 
 plt.xlabel('Day of the Month')
 plt.ylabel('Cumulative Amount Spent')
 plt.title('Comparison of Cumulative Spending This Month vs. Last Month')
 plt.legend()
+
+# Add cyberpunk effects
+mplcyberpunk.add_glow_effects()
+mplcyberpunk.make_lines_glow()
+mplcyberpunk.add_underglow()
+
 plt.tight_layout()
 
 # Save the plot as a PNG file
-plt.savefig(f"{input_date.strftime('%Y-%m-%d')}-cumulative_spending_comparison.png")
+plt.savefig(f"{input_date.strftime('%Y-%m-%d')}-cumulative_spending_comparison.png", facecolor='black')
 
 # Close the plot
 plt.close()
