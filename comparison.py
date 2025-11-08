@@ -228,29 +228,44 @@ print(comparison_summary_text)
 # Set professional dark theme styling
 plt.style.use("dark_background")
 
-# Plotting
-fig, ax = plt.subplots(figsize=(12, 7), facecolor='#1a1a1a')
-ax.set_facecolor('#1a1a1a')
+# Plotting - increased figure size for better spacing
+fig, ax = plt.subplots(figsize=(14, 8), facecolor='#0d1117')
+ax.set_facecolor('#0d1117')
+
+# Add subtle border around the plot area for depth
+for spine in ax.spines.values():
+    spine.set_linewidth(1.5)
 
 # Add the overlay to explain the diff between this month and same time last month
-fig.text(0.02, 0.78, comparison_summary_text, transform=plt.gca().transAxes, fontsize=11,
-         bbox=dict(facecolor='#2d2d2d', alpha=0.9, edgecolor='#404040', boxstyle='round,pad=0.5'),
-         color='#ffffff', family='monospace')
+# Positioned on the right to avoid legend overlap
+summary_text_x = 0.77
+summary_text_y = 0.82
+summary_box = fig.text(summary_text_x, summary_text_y, comparison_summary_text,
+                       transform=plt.gca().transAxes, fontsize=11.5,
+                       bbox=dict(facecolor='#161b22', alpha=0.95, edgecolor='#30363d',
+                                boxstyle='round,pad=0.6', linewidth=1.2),
+                       color='#ffffff', family='monospace',
+                       verticalalignment='top', linespacing=1.4)
 
 # Plot the cumulative spending for last month, if data exists
 if not last_month_df.empty and 'day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
+    # Enhanced glow effect with underglow
+    ax.plot(last_month_df['day'], last_month_df['cumulative'],
+            linestyle='-', color='#5470c6', linewidth=2.5, alpha=0.9)
+    # Add markers with glow effect
     ax.plot(last_month_df['day'], last_month_df['cumulative'], marker='o', label='Last Month',
-            linestyle='-', color='#5470c6', linewidth=2.5, markersize=6, markerfacecolor='#5470c6',
-            markeredgecolor='#ffffff', markeredgewidth=1)
+            linestyle='', color='#5470c6', markersize=8, markerfacecolor='#5470c6',
+            markeredgecolor='#ffffff', markeredgewidth=1.5, alpha=0.9)
 
 # Plot the cumulative spending for current month, if data exists
 if not current_month_df.empty and 'day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
-    # Plot actual spending up to input_date (solid line)
-    # current_month_df is already filtered up to input_date + 1 day by get_transactions_df,
-    # then its 'day' and 'cumulative' are calculated.
+    # Enhanced glow effect with underglow for current month
+    ax.plot(current_month_df['day'], current_month_df['cumulative'],
+            linestyle='-', color='#91cc75', linewidth=2.5, alpha=0.9)
+    # Add markers with glow effect
     ax.plot(current_month_df['day'], current_month_df['cumulative'], marker='o', label='Current Month Spending',
-            linestyle='-', color='#91cc75', linewidth=2.5, markersize=6, markerfacecolor='#91cc75',
-            markeredgecolor='#ffffff', markeredgewidth=1)
+            linestyle='', color='#91cc75', markersize=8, markerfacecolor='#91cc75',
+            markeredgecolor='#ffffff', markeredgewidth=1.5, alpha=0.9)
 
 # Plot projected spending for the rest of the month (faded line)
 if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
@@ -288,40 +303,66 @@ if not full_current_month_df.empty and 'day' in full_current_month_df.columns an
                 plot_df_for_projection = pd.concat([point_to_add, projected_line_df], ignore_index=True).sort_values(by='day').drop_duplicates(subset=['day'], keep='first')
 
 
+        # Enhanced projected line with glow effect
+        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'],
+                linestyle='--', color='#91cc75', alpha=0.4, linewidth=2.5)
+        # Add subtle markers
         ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='.', label='Projected Spending (Full Month)',
-            linestyle='--', color='#91cc75', alpha=0.6, linewidth=2, markersize=4)
+                linestyle='', color='#91cc75', markersize=6, alpha=0.6)
 
-# Professional styling for axes and labels
-ax.set_xlabel('Day of the Month', fontsize=12, color='#cccccc', fontweight='500')
-ax.set_ylabel('Cumulative Amount Spent ($)', fontsize=12, color='#cccccc', fontweight='500')
-ax.set_title('Cumulative Spending Comparison', fontsize=16, color='#ffffff', fontweight='600', pad=20)
+# Professional styling for axes and labels - enhanced
+ax.set_xlabel('Day of the Month', fontsize=13, color='#c9d1d9', fontweight='500', labelpad=12)
+ax.set_ylabel('Cumulative Amount Spent ($)', fontsize=13, color='#c9d1d9', fontweight='500', labelpad=12)
+ax.set_title('Cumulative Spending Comparison', fontsize=18, color='#ffffff', fontweight='600', pad=25, family='sans-serif')
 
-# Grid styling
-ax.grid(True, linestyle='--', alpha=0.3, color='#666666')
+# Enhanced grid styling
+ax.grid(True, linestyle='--', alpha=0.25, color='#484f58', linewidth=0.8)
 ax.set_axisbelow(True)
 
-# Axis styling
-ax.tick_params(colors='#cccccc', labelsize=10)
+# Enhanced axis styling
+ax.tick_params(colors='#8b949e', labelsize=11, length=4, width=1)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
-ax.spines['bottom'].set_color('#404040')
-ax.spines['left'].set_color('#404040')
+ax.spines['bottom'].set_color('#30363d')
+ax.spines['left'].set_color('#30363d')
 
-# Legend styling
-legend = ax.legend(loc='upper left', frameon=True, facecolor='#2d2d2d',
-                  edgecolor='#404040', labelcolor='#ffffff', fontsize=10)
-legend.get_frame().set_boxstyle('round,pad=0.3')
+# Enhanced legend styling - moved to better position
+legend = ax.legend(loc='upper left', frameon=True, facecolor='#161b22',
+                  edgecolor='#30363d', labelcolor='#c9d1d9', fontsize=11,
+                  bbox_to_anchor=(0.02, 0.98), bbox_transform=ax.transAxes)
+legend.get_frame().set_boxstyle('round,pad=0.5')
+legend.get_frame().set_alpha(0.95)
 
-# Format y-axis to show dollar amounts
+# Format y-axis to show dollar amounts - enhanced with better spacing
 def currency_formatter(x, p):
-    return f'${x:,.0f}'
+    if x >= 1000:
+        return f'${x/1000:.1f}k'
+    else:
+        return f'${x:,.0f}'
 ax.yaxis.set_major_formatter(FuncFormatter(currency_formatter))
+
+# Set intelligent axis limits and ticks
+if not last_month_df.empty or not current_month_df.empty:
+    max_val = max(
+        last_month_df['cumulative'].max() if not last_month_df.empty else 0,
+        current_month_df['cumulative'].max() if not current_month_df.empty else 0
+    )
+    if max_val > 0:
+        # Round up to nearest thousand for clean y-axis
+        y_max = math.ceil(max_val / 1000) * 1000
+        ax.set_ylim(bottom=0, top=y_max * 1.1)  # Add 10% padding at top
+
+# Ensure x-axis shows all days of the month
+max_day = input_date.days_in_month
+ax.set_xlim(left=0.5, right=max_day + 0.5)
+ax.xaxis.set_major_locator(plt.MultipleLocator(5))  # Show ticks every 5 days
+ax.xaxis.set_minor_locator(plt.MultipleLocator(1))  # Minor ticks every day
 
 plt.tight_layout()
 
-# Save the plot as a PNG file
+# Save the plot as a PNG file - enhanced with higher DPI
 plt.savefig(f"{input_date.strftime('%Y-%m-%d')}-cumulative_spending_comparison.png",
-            facecolor='#1a1a1a', dpi=120, bbox_inches='tight')
+            facecolor='#0d1117', dpi=150, bbox_inches='tight', pad_inches=0.2)
 
 # Close the plot
 plt.close()
