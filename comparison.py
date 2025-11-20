@@ -107,6 +107,16 @@ def get_transactions_df(start_date_str: str, end_date_str: str, hostname: str, r
 current_month_start_str = start_of_this_month.strftime('%Y-%m-%d')
 current_month_end_str = (input_date + pd.Timedelta(days=1)).strftime('%Y-%m-%d') # Includes all of input_date
 current_month_df = get_transactions_df(current_month_start_str, current_month_end_str, lm_hostname, headers)
+# Filter to ensure we don't include transactions from the next month (due to +1 day in end_str)
+if not current_month_df.empty:
+    # Ensure we compare normalized dates (though current_month_df['date'] is already normalized)
+    # Use a normalized input_date for comparison to avoid issues if input_date has time (e.g. 'today')
+    # But wait, if input_date is 'today', we want to include today's transactions.
+    # current_month_df['date'] is 00:00:00.
+    # If input_date is today (with time), df['date'] <= input_date is True for today.
+    # If input_date is args.date (00:00:00), df['date'] <= input_date is True for that date.
+    # So direct comparison is safe.
+    current_month_df = current_month_df[current_month_df['date'] <= input_date]
 
 ###
 # Get last month's transactions
@@ -128,6 +138,9 @@ if end_of_current_month_for_plot.strftime('%Y-%m-%d') >= current_month_end_str: 
         lm_hostname,
         headers
     )
+    # Filter to ensure we don't include transactions from the next month
+    if not full_current_month_df.empty:
+        full_current_month_df = full_current_month_df[full_current_month_df['date'] <= end_of_current_month_for_plot]
 
 if not full_current_month_df.empty:
     full_current_month_df.sort_values(by='date', inplace=True) # ensure correct order for cumsum
@@ -281,18 +294,22 @@ if not last_month_df.empty and 'normalized_day' in last_month_df.columns and 'cu
 
 # Plot the cumulative spending for current month, if data exists
 if not current_month_df.empty and 'normalized_day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
-    ax.plot(current_month_df['normalized_day'], current_month_df['cumulative'], marker='o', label='Current Month',
-            linestyle='-', color=color_current_month, linewidth=3, markersize=7, markerfacecolor=color_current_month,
-            markeredgecolor='#ffffff', markeredgewidth=1.5, zorder=5) # Higher zorder to stay on top
-    # Add fill
-    ax.fill_between(current_month_df['normalized_day'], current_month_df['cumulative'], color=color_current_month, alpha=0.2)
+    # Filter out any invalid days (e.g. day 0 or NaN) that might have crept in
+    plot_df = current_month_df[current_month_df['normalized_day'] >= 1]
+    
+    if not plot_df.empty:
+        ax.plot(plot_df['normalized_day'], plot_df['cumulative'], marker='o', label='Current Month',
+                linestyle='-', color=color_current_month, linewidth=3, markersize=7, markerfacecolor=color_current_month,
+                markeredgecolor='#ffffff', markeredgewidth=1.5, zorder=5) # Higher zorder to stay on top
+        # Add fill
+        ax.fill_between(plot_df['normalized_day'], plot_df['cumulative'], color=color_current_month, alpha=0.2)
 
-    # Annotation for last point
-    last_val = current_month_df['cumulative'].iloc[-1]
-    last_day = current_month_df['normalized_day'].iloc[-1]
-    ax.annotate(f'${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 5), textcoords='offset points',
-                color=color_current_month, fontsize=10, fontweight='bold', va='bottom',
-                bbox=dict(facecolor='#1a1a1a', edgecolor='none', alpha=0.7, pad=1))
+        # Annotation for last point
+        last_val = plot_df['cumulative'].iloc[-1]
+        last_day = plot_df['normalized_day'].iloc[-1]
+        ax.annotate(f'${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 5), textcoords='offset points',
+                    color=color_current_month, fontsize=10, fontweight='bold', va='bottom',
+                    bbox=dict(facecolor='#1a1a1a', edgecolor='none', alpha=0.7, pad=1))
 
 # Plot projected spending for the rest of the month (faded line)
 if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
@@ -315,6 +332,9 @@ if not full_current_month_df.empty and 'day' in full_current_month_df.columns an
                     'is_income': False
                 }])
                 plot_df_for_projection = pd.concat([point_to_add, projected_line_df], ignore_index=True).sort_values(by='day').drop_duplicates(subset=['day'], keep='first')
+
+        # Filter out any invalid days
+        plot_df_for_projection = plot_df_for_projection[plot_df_for_projection['day'] >= 1]
 
         ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='', label='Projected',
             linestyle='--', color=color_projected, alpha=0.5, linewidth=2)
