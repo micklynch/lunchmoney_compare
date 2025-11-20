@@ -229,75 +229,93 @@ print(comparison_summary_text)
 plt.style.use("dark_background")
 
 # Plotting
-fig, ax = plt.subplots(figsize=(12, 7), facecolor='#1a1a1a')
+fig, ax = plt.subplots(figsize=(12, 8), facecolor='#1a1a1a') # Increased height slightly
 ax.set_facecolor('#1a1a1a')
 
-# Add the overlay to explain the diff between this month and same time last month
-fig.text(0.02, 0.78, comparison_summary_text, transform=plt.gca().transAxes, fontsize=11,
-         bbox=dict(facecolor='#2d2d2d', alpha=0.9, edgecolor='#404040', boxstyle='round,pad=0.5'),
-         color='#ffffff', family='monospace')
+# Move summary text to a dedicated area below the title (subtitle style)
+# Adjust subplot params to make room at the top
+plt.subplots_adjust(top=0.82)
+
+# Main Title
+fig.suptitle('Cumulative Spending Comparison', fontsize=20, color='#ffffff', fontweight='bold', y=0.96)
+
+# Subtitle (Summary Text)
+fig.text(0.5, 0.89, comparison_summary_text, fontsize=12, ha='center', va='top',
+         color='#e0e0e0', family='monospace', fontweight='bold')
+
+# Colors
+color_last_month = '#00f2fe' # Cyan/Blue
+color_current_month = '#43e97b' # Green/Teal
+color_projected = '#43e97b'
 
 # Plot the cumulative spending for last month, if data exists
 if not last_month_df.empty and 'day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
     ax.plot(last_month_df['day'], last_month_df['cumulative'], marker='o', label='Last Month',
-            linestyle='-', color='#5470c6', linewidth=2.5, markersize=6, markerfacecolor='#5470c6',
-            markeredgecolor='#ffffff', markeredgewidth=1)
+            linestyle='-', color=color_last_month, linewidth=2, markersize=5, markerfacecolor=color_last_month,
+            markeredgecolor='#ffffff', markeredgewidth=0.5, alpha=0.8)
+    # Add fill
+    ax.fill_between(last_month_df['day'], last_month_df['cumulative'], color=color_last_month, alpha=0.1)
+    
+    # Annotation for last point
+    last_val = last_month_df['cumulative'].iloc[-1]
+    last_day = last_month_df['day'].iloc[-1]
+    ax.annotate(f'${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 0), textcoords='offset points',
+                color=color_last_month, fontsize=9, fontweight='bold', va='center')
 
 # Plot the cumulative spending for current month, if data exists
 if not current_month_df.empty and 'day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
-    # Plot actual spending up to input_date (solid line)
-    # current_month_df is already filtered up to input_date + 1 day by get_transactions_df,
-    # then its 'day' and 'cumulative' are calculated.
-    ax.plot(current_month_df['day'], current_month_df['cumulative'], marker='o', label='Current Month Spending',
-            linestyle='-', color='#91cc75', linewidth=2.5, markersize=6, markerfacecolor='#91cc75',
-            markeredgecolor='#ffffff', markeredgewidth=1)
+    ax.plot(current_month_df['day'], current_month_df['cumulative'], marker='o', label='Current Month',
+            linestyle='-', color=color_current_month, linewidth=3, markersize=7, markerfacecolor=color_current_month,
+            markeredgecolor='#ffffff', markeredgewidth=1.5, zorder=5) # Higher zorder to stay on top
+    # Add fill
+    ax.fill_between(current_month_df['day'], current_month_df['cumulative'], color=color_current_month, alpha=0.2)
+
+    # Annotation for last point
+    last_val = current_month_df['cumulative'].iloc[-1]
+    last_day = current_month_df['day'].iloc[-1]
+    ax.annotate(f'${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 5), textcoords='offset points',
+                color=color_current_month, fontsize=10, fontweight='bold', va='bottom',
+                bbox=dict(facecolor='#1a1a1a', edgecolor='none', alpha=0.7, pad=1))
 
 # Plot projected spending for the rest of the month (faded line)
 if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
-    # Filter data from input_date to the end of the month for the projected line
     projected_line_df = full_current_month_df[full_current_month_df['date'] >= input_date.replace(hour=0, minute=0, second=0, microsecond=0)]
     if not projected_line_df.empty:
-        # To make the line connect:
-        # The cumulative sum in full_current_month_df at input_date should naturally align with current_month_df's last point
-        # if current_month_df is a subset of full_current_month_df up to input_date.
-        # Let's ensure the first point of projected_line_df matches the last point of current_month_df if current_month_df is not empty.
-
         plot_df_for_projection = projected_line_df
 
-        # If current_month_df has data, ensure the projected line starts from its last point
+        # Connect lines logic (same as before)
         if not current_month_df.empty and not current_month_df[current_month_df['date'].dt.date == input_date.date()].empty:
             last_actual_day_data = current_month_df[current_month_df['date'].dt.date == input_date.date()].iloc[-1]
-
-            # If input_date is not the first day of the month, and we have data for it in full_current_month_df
             if not projected_line_df[projected_line_df['day'] == input_date.day].empty:
-                 # Update the cumulative value of the first point of the projected line to match the actual spending
                  projected_line_df.loc[projected_line_df['day'] == input_date.day, 'cumulative'] = last_actual_day_data['cumulative']
-            else: # input_date might not have transactions in full_current_month_df after input_date (e.g. if input_date is last transaction day)
-                  # Or, if it's the first day and no prior transactions, this point is fine.
-                  # We need to add this point to projected_line_df to start the line from there.
-                  # Create a new DataFrame for this single point to avoid SettingWithCopyWarning
+            else:
                 point_to_add = pd.DataFrame([{
                     'date': last_actual_day_data['date'],
                     'day': last_actual_day_data['day'],
                     'cumulative': last_actual_day_data['cumulative'],
-                    # Add other necessary columns if they are used by plotting, with appropriate values
-                    'amount': 0, # Placeholder, not used for plotting cumulative
+                    'amount': 0,
                     'exclude_from_totals': False,
                     'is_income': False
                 }])
                 plot_df_for_projection = pd.concat([point_to_add, projected_line_df], ignore_index=True).sort_values(by='day').drop_duplicates(subset=['day'], keep='first')
 
+        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='', label='Projected',
+            linestyle='--', color=color_projected, alpha=0.5, linewidth=2)
+        
+        # Annotation for projected end
+        last_val = plot_df_for_projection['cumulative'].iloc[-1]
+        last_day = plot_df_for_projection['day'].iloc[-1]
+        ax.annotate(f'Proj: ${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 0), textcoords='offset points',
+                    color=color_projected, fontsize=9, alpha=0.7, va='center')
 
-        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='.', label='Projected Spending (Full Month)',
-            linestyle='--', color='#91cc75', alpha=0.6, linewidth=2, markersize=4)
 
 # Professional styling for axes and labels
-ax.set_xlabel('Day of the Month', fontsize=12, color='#cccccc', fontweight='500')
-ax.set_ylabel('Cumulative Amount Spent ($)', fontsize=12, color='#cccccc', fontweight='500')
-ax.set_title('Cumulative Spending Comparison', fontsize=16, color='#ffffff', fontweight='600', pad=20)
+ax.set_xlabel('Day of the Month', fontsize=12, color='#cccccc', fontweight='500', labelpad=10)
+ax.set_ylabel('Cumulative Amount Spent ($)', fontsize=12, color='#cccccc', fontweight='500', labelpad=10)
+# ax.set_title removed in favor of fig.suptitle
 
 # Grid styling
-ax.grid(True, linestyle='--', alpha=0.3, color='#666666')
+ax.grid(True, linestyle=':', alpha=0.4, color='#666666') # Dotted grid
 ax.set_axisbelow(True)
 
 # Axis styling
@@ -306,6 +324,9 @@ ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 ax.spines['bottom'].set_color('#404040')
 ax.spines['left'].set_color('#404040')
+
+# Ensure x-axis covers the full month for context
+ax.set_xlim(1, 31)
 
 # Legend styling
 legend = ax.legend(loc='upper left', frameon=True, facecolor='#2d2d2d',
@@ -317,7 +338,7 @@ def currency_formatter(x, p):
     return f'${x:,.0f}'
 ax.yaxis.set_major_formatter(FuncFormatter(currency_formatter))
 
-plt.tight_layout()
+# plt.tight_layout() # Removed in favor of manual subplots_adjust for title/subtitle control
 
 # Save the plot as a PNG file
 plt.savefig(f"{input_date.strftime('%Y-%m-%d')}-cumulative_spending_comparison.png",
