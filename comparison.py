@@ -237,18 +237,35 @@ fig.text(0.02, 0.78, comparison_summary_text, transform=plt.gca().transAxes, fon
          bbox=dict(facecolor='#2d2d2d', alpha=0.9, edgecolor='#404040', boxstyle='round,pad=0.5'),
          color='#ffffff', family='monospace')
 
+# Calculate days in months for normalization
+days_in_current_month = start_of_this_month.days_in_month
+days_in_prev_month = start_of_previous_month.days_in_month
+
+# Normalize 'day' for plotting
+if not last_month_df.empty:
+    # Scale the previous month's days to match the current month's length
+    last_month_df['normalized_day'] = last_month_df['day'] * (days_in_current_month / days_in_prev_month)
+else:
+    last_month_df['normalized_day'] = None
+
+if not current_month_df.empty:
+    # Current month days are already correct relative to the x-axis
+    current_month_df['normalized_day'] = current_month_df['day']
+else:
+    current_month_df['normalized_day'] = None
+
 # Plot the cumulative spending for last month, if data exists
-if not last_month_df.empty and 'day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
-    ax.plot(last_month_df['day'], last_month_df['cumulative'], marker='o', label='Last Month',
+if not last_month_df.empty and 'normalized_day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
+    ax.plot(last_month_df['normalized_day'], last_month_df['cumulative'], marker='o', label='Last Month',
             linestyle='-', color='#5470c6', linewidth=2.5, markersize=6, markerfacecolor='#5470c6',
             markeredgecolor='#ffffff', markeredgewidth=1)
 
 # Plot the cumulative spending for current month, if data exists
-if not current_month_df.empty and 'day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
+if not current_month_df.empty and 'normalized_day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
     # Plot actual spending up to input_date (solid line)
     # current_month_df is already filtered up to input_date + 1 day by get_transactions_df,
     # then its 'day' and 'cumulative' are calculated.
-    ax.plot(current_month_df['day'], current_month_df['cumulative'], marker='o', label='Current Month Spending',
+    ax.plot(current_month_df['normalized_day'], current_month_df['cumulative'], marker='o', label='Current Month Spending',
             linestyle='-', color='#91cc75', linewidth=2.5, markersize=6, markerfacecolor='#91cc75',
             markeredgecolor='#ffffff', markeredgewidth=1)
 
