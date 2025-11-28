@@ -311,8 +311,12 @@ if not current_month_df.empty and 'normalized_day' in current_month_df.columns a
                     color=color_current_month, fontsize=10, fontweight='bold', va='bottom',
                     bbox=dict(facecolor='#1a1a1a', edgecolor='none', alpha=0.7, pad=1))
 
-# Plot projected spending for the rest of the month (faded line)
-if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
+# Determine if we should show future spending (only if looking at a past date)
+# We compare normalized dates to ignore time components
+show_future_spending = input_date.normalize() < pd.Timestamp.now().normalize()
+
+# Plot future spending for the rest of the month (faded line)
+if show_future_spending and not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
     projected_line_df = full_current_month_df[full_current_month_df['date'] >= input_date.replace(hour=0, minute=0, second=0, microsecond=0)]
     if not projected_line_df.empty:
         plot_df_for_projection = projected_line_df
@@ -336,13 +340,13 @@ if not full_current_month_df.empty and 'day' in full_current_month_df.columns an
         # Filter out any invalid days
         plot_df_for_projection = plot_df_for_projection[plot_df_for_projection['day'] >= 1]
 
-        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='', label='Projected',
+        ax.plot(plot_df_for_projection['day'], plot_df_for_projection['cumulative'], marker='', label='Future Spending',
             linestyle='--', color=color_projected, alpha=0.5, linewidth=2)
         
         # Annotation for projected end
         last_val = plot_df_for_projection['cumulative'].iloc[-1]
         last_day = plot_df_for_projection['day'].iloc[-1]
-        ax.annotate(f'Proj: ${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 0), textcoords='offset points',
+        ax.annotate(f'Future: ${last_val:,.0f}', xy=(last_day, last_val), xytext=(5, 0), textcoords='offset points',
                     color=color_projected, fontsize=9, alpha=0.7, va='center')
 
 
