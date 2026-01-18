@@ -229,14 +229,43 @@ this_month_total = round(this_month_total, 2)
 diff = this_month_total - cumulative_amount_on_equivalent_day_last_month_val
 diff = round(diff, 2)
 
+# Calculate percentage difference
+percent_diff = 0.0
+if cumulative_amount_on_equivalent_day_last_month_val > 0:
+    percent_diff = (diff / cumulative_amount_on_equivalent_day_last_month_val) * 100
+
+# Get total spending for the entire last month
+last_month_total_end = last_month_df['cumulative'].iloc[-1] if not last_month_df.empty else 0.0
+
+# Prepare Console Output
+# ANSI Color Codes
+GREEN = '\033[92m'
+RED = '\033[91m'
+BOLD = '\033[1m'
+CYAN = '\033[96m'
+RESET = '\033[0m'
+
+diff_color = RED if diff > 0 else GREEN
+diff_sign = "+" if diff > 0 else ""
+
+console_output = (
+    f"\n{BOLD}{CYAN}--- Spending Comparison ({input_date.strftime('%Y-%m-%d')}) ---{RESET}\n"
+    f"{BOLD}Current Month:{RESET}         ${this_month_total:,.2f}\n"
+    f"{BOLD}Last Month (Same Day):{RESET} ${cumulative_amount_on_equivalent_day_last_month_val:,.2f}\n"
+    f"{BOLD}Difference:{RESET}            {diff_color}${diff:+,.2f} ({percent_diff:+.1f}%){RESET}\n"
+    f"{BOLD}Last Month Total:{RESET}      ${last_month_total_end:,.2f}\n"
+    f"{CYAN}-------------------------------------------{RESET}"
+)
+print(console_output)
+
+# Prepare Plot Summary Text (Keep it concise)
 comparison_summary_text = "NaN"
 if (diff > 0):
-    comparison_summary_text = f"Spending this month: ${this_month_total}\n${abs(diff)} more than last month"
+    comparison_summary_text = f"Spending this month: ${this_month_total:,.2f}\n${abs(diff):,.2f} more than last month ({percent_diff:+.1f}%)"
 elif (diff < 0):
-    comparison_summary_text = f"Spending this month: ${this_month_total}\n${abs(diff)} less than last month"
+    comparison_summary_text = f"Spending this month: ${this_month_total:,.2f}\n${abs(diff):,.2f} less than last month ({percent_diff:+.1f}%)"
 else:
-    comparison_summary_text = f"Spending this month: ${this_month_total}\nYou've spent the same as you did last month"
-print(comparison_summary_text)
+    comparison_summary_text = f"Spending this month: ${this_month_total:,.2f}\nSame as last month"
 
 # Set professional dark theme styling
 plt.style.use("dark_background")
