@@ -46,7 +46,7 @@ It then calculates cumulative spending for both periods and plots them. The comp
 ## Result
 The final graph provides a visual comparison of cumulative spending. An example is shown below (note: your specific output will vary).
 
-<img width="500" alt="2024-03-06-cumulative_spending_comparison" src="https://github.com/micklynch/lunchmoney/assets/37063953/02f7fe2b-f09f-403d-bd03-bc4f77a33f44">
+<img width="500" alt="lunchmoney_compare_example" src="assets/lunchmoney_compare_example.png">
 
 **Note on the plot:**
 *   The solid green line shows your spending in the current reference month up to the specified (or current) date.
