@@ -3,3 +3,5 @@
 .env
 .ipynb_checkpoints
 venv
+
+!assets/lunchmoney_compare_example.png
