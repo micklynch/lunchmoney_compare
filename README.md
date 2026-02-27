@@ -11,18 +11,22 @@ You can get an API key [from lunchmoney](https://my.lunchmoney.app/developers).
 
 #### Installing dependencies
 
-It’s typically recommended to use virtual environments when working with specific applications, so:
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management. To install dependencies:
 
-1. `python3 -m venv .venv` // create virtual environment for this directory
-2. `source .venv/bin/activate` // activate it
-3. `pip install -r requirements.txt` // install requirements
+```bash
+uv sync
+```
 
-All dependencies will be installed for the project; proceed.
+To also install development dependencies:
+
+```bash
+uv sync --group dev
+```
 
 #### Running the code
 You can run the code using:
 ```bash
-python comparison.py
+uv run python comparison.py
 ```
 
 The script also accepts an optional date argument to specify the reference date for the comparison. If omitted, it defaults to the current date.
@@ -31,7 +35,13 @@ The script also accepts an optional date argument to specify the reference date 
 
 Example:
 ```bash
-python comparison.py --date 2023-11-15
+uv run python comparison.py --date 2023-11-15
+```
+
+Alternatively, you can activate the virtual environment first and run normally:
+```bash
+source .venv/bin/activate
+python comparison.py
 ```
 
 This will generate a comparison as of November 15, 2023, comparing spending up to that day against the equivalent period in October 2023.
