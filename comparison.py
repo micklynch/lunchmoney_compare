@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import math
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -188,6 +189,534 @@ def find_nearest_available_day(df, target_day):
         return None # No available days
     nearest_day = min(available_days, key=lambda x: abs(x - target_day)) # Ensure available_days is not empty
     return nearest_day
+
+_DASHBOARD_HTML = r'''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>spending dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #050505;
+  --surface: #0b0b0b;
+  --border: #191919;
+  --border-faint: rgba(25,25,25,0.55);
+  --accent: #00e5c4;
+  --text: #bebebe;
+  --text-dim: #343434;
+  --text-mid: #585858;
+  --text-bright: #eeeeee;
+  --red: #f87171;
+  --green: #34d399;
+  --blue: #60a5fa;
+}
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.65;
+}
+body { max-width: 1280px; margin: 0 auto; padding: 52px 44px; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 18px;
+  margin-bottom: 48px;
+}
+.hd-wordmark { font-size: 11px; text-transform: uppercase; letter-spacing: .2em; color: var(--text-dim); }
+.hd-date { font-size: 11px; color: var(--text-mid); }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-bottom: 48px;
+}
+.stat { background: var(--surface); padding: 28px 24px; }
+.stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .15em; color: var(--text-dim); margin-bottom: 14px; }
+.stat-val { font-size: 27px; color: var(--text-bright); letter-spacing: -.025em; line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.stat-val.up { color: var(--red); }
+.stat-val.dn { color: var(--green); }
+.stat-sub { font-size: 10px; color: var(--text-mid); }
+.sec { margin-bottom: 48px; }
+.sec-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.sec-title { font-size: 10px; text-transform: uppercase; letter-spacing: .15em; color: var(--accent); }
+.sec-meta { font-size: 10px; color: var(--text-dim); }
+.chart-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 24px 24px 18px;
+  height: 310px;
+  position: relative;
+}
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 48px; }
+.bar-row { margin-bottom: 12px; }
+.bar-row-hd { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 5px; gap: 8px; }
+.bar-row-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-row-amt { color: var(--text-bright); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.bar-track { height: 1px; background: var(--border); }
+.bar-fill { height: 1px; background: var(--accent); }
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text-dim);
+  font-weight: 400;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.data-table td { padding: 7px 12px; border-bottom: 1px solid var(--border-faint); color: var(--text); }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table .r { text-align: right; color: var(--text-bright); font-variant-numeric: tabular-nums; }
+.data-table .dim { color: var(--text-mid); }
+.data-table .trunc { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.data-table th.sortable { cursor: pointer; user-select: none; }
+.data-table th.sortable:hover { color: var(--text-mid); }
+.sort-ind { color: var(--accent); }
+.pace-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.pace-card { background: var(--surface); padding: 22px 24px; }
+.pace-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .13em; color: var(--text-dim); margin-bottom: 10px; }
+.pace-val { font-size: 18px; color: var(--text-bright); font-variant-numeric: tabular-nums; }
+.pace-sub { font-size: 10px; color: var(--text-mid); margin-top: 5px; }
+.prog-track { height: 1px; background: var(--border); margin-top: 10px; }
+.prog-fill { height: 1px; background: var(--accent); }
+footer {
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="hd-wordmark">spending dashboard</span>
+  <span class="hd-date" id="hd-date"></span>
+</header>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-lbl">this month</div>
+    <div class="stat-val" id="s-cur"></div>
+    <div class="stat-sub" id="s-cur-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">last month · equivalent</div>
+    <div class="stat-val" id="s-leq"></div>
+    <div class="stat-sub" id="s-leq-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">vs last month</div>
+    <div class="stat-val" id="s-diff"></div>
+    <div class="stat-sub" id="s-diff-sub"></div>
+  </div>
+  <div class="stat">
+    <div class="stat-lbl">last month · total</div>
+    <div class="stat-val" id="s-ltot"></div>
+    <div class="stat-sub" id="s-ltot-sub"></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-hd">
+    <span class="sec-title">cumulative spending</span>
+    <span class="sec-meta" id="chart-meta"></span>
+  </div>
+  <div class="chart-box">
+    <canvas id="cumulative-chart"></canvas>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="sec">
+    <div class="sec-hd">
+      <span class="sec-title">daily totals</span>
+      <span class="sec-meta">this month · top days</span>
+    </div>
+    <div id="daily-bars"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-hd">
+      <span class="sec-title">by category</span>
+      <span class="sec-meta">this month</span>
+    </div>
+    <div id="cat-bars"></div>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sec-hd">
+    <span class="sec-title">transactions</span>
+    <span class="sec-meta" id="txn-meta">this month</span>
+  </div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th class="sortable" onclick="sortTable('date')">date<span class="sort-ind" id="sort-date"> ↓</span></th>
+        <th class="sortable" onclick="sortTable('payee')">payee<span class="sort-ind" id="sort-payee"></span></th>
+        <th class="sortable" onclick="sortTable('category')">category<span class="sort-ind" id="sort-category"></span></th>
+        <th class="sortable" style="text-align:right" onclick="sortTable('amount')">amount<span class="sort-ind" id="sort-amount"></span></th>
+      </tr>
+    </thead>
+    <tbody id="txn-body"></tbody>
+  </table>
+</div>
+
+<div class="sec">
+  <div class="sec-hd"><span class="sec-title">pace &amp; projection</span></div>
+  <div class="pace-grid">
+    <div class="pace-card">
+      <div class="pace-lbl">avg / day</div>
+      <div class="pace-val" id="p-avg"></div>
+    </div>
+    <div class="pace-card">
+      <div class="pace-lbl">projected total</div>
+      <div class="pace-val" id="p-proj"></div>
+      <div class="pace-sub" id="p-proj-sub"></div>
+      <div class="prog-track"><div class="prog-fill" id="p-proj-bar"></div></div>
+    </div>
+    <div class="pace-card">
+      <div class="pace-lbl">month progress</div>
+      <div class="pace-val" id="p-prog"></div>
+      <div class="prog-track"><div class="prog-fill" id="p-prog-bar"></div></div>
+    </div>
+    <div class="pace-card">
+      <div class="pace-lbl">days remaining</div>
+      <div class="pace-val" id="p-rem"></div>
+      <div class="pace-sub" id="p-rem-sub"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <span>lunchmoney · spending comparison</span>
+  <span id="ft-date"></span>
+</footer>
+
+<script>
+const D = __DATA_JSON__;
+
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtDiff = n => (n >= 0 ? '+$' : '−$') + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtK = n => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n);
+const clamp = (n, a, b) => Math.min(Math.max(n, a), b);
+
+$('hd-date').textContent = D.summary.date;
+$('ft-date').textContent = 'generated ' + D.summary.date;
+$('chart-meta').textContent = D.summary.monthName;
+
+// Stats
+$('s-cur').textContent = fmt(D.summary.currentMonthTotal);
+$('s-cur-sub').textContent = D.summary.daysElapsed + ' of ' + D.summary.daysInMonth + ' days';
+$('s-leq').textContent = fmt(D.summary.lastMonthEquivalent);
+$('s-leq-sub').textContent = 'proportional equivalent';
+const dEl = $('s-diff');
+const isUp = D.summary.difference > 0;
+dEl.textContent = fmtDiff(D.summary.difference);
+dEl.className = 'stat-val ' + (isUp ? 'up' : 'dn');
+$('s-diff-sub').textContent = (isUp ? '+' : '') + D.summary.percentDiff.toFixed(1) + '% vs last month';
+$('s-ltot').textContent = fmt(D.summary.lastMonthTotal);
+$('s-ltot-sub').textContent = 'full month';
+
+// Chart
+const ACCENT = '#00e5c4';
+const LAST_C = '#3b82f6';
+const chartCtx = $('cumulative-chart').getContext('2d');
+const chartDatasets = [
+  {
+    label: 'last month',
+    data: D.lastMonthChart,
+    borderColor: LAST_C,
+    backgroundColor: 'rgba(59,130,246,0.05)',
+    borderWidth: 1.5,
+    pointRadius: 2,
+    pointHoverRadius: 4,
+    fill: true,
+    tension: 0.35,
+  },
+  {
+    label: 'this month',
+    data: D.currentMonthChart,
+    borderColor: ACCENT,
+    backgroundColor: 'rgba(0,229,196,0.06)',
+    borderWidth: 2,
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    fill: true,
+    tension: 0.35,
+  },
+];
+if (D.futureChart && D.futureChart.length > 1) {
+  chartDatasets.push({
+    label: 'projected',
+    data: D.futureChart,
+    borderColor: ACCENT,
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderDash: [4, 5],
+    pointRadius: 0,
+    fill: false,
+    tension: 0.35,
+  });
+}
+new Chart(chartCtx, {
+  type: 'line',
+  data: { datasets: chartDatasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+    interaction: { mode: 'index', intersect: false },
+    animation: { duration: 350 },
+    plugins: {
+      legend: {
+        align: 'end',
+        labels: {
+          color: '#585858',
+          font: { family: "'JetBrains Mono', monospace", size: 10 },
+          boxWidth: 20, padding: 20,
+          usePointStyle: true, pointStyle: 'line',
+        }
+      },
+      tooltip: {
+        backgroundColor: '#0b0b0b',
+        borderColor: '#191919',
+        borderWidth: 1,
+        titleColor: '#585858',
+        bodyColor: '#bebebe',
+        titleFont: { family: "'JetBrains Mono', monospace", size: 10 },
+        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+        padding: 12,
+        callbacks: {
+          title: ctx => 'day ' + ctx[0].parsed.x,
+          label: ctx => '  ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y),
+        }
+      }
+    },
+    scales: {
+      x: {
+        type: 'linear', min: 1, max: 31,
+        grid: { color: 'rgba(25,25,25,0.95)' },
+        ticks: { color: '#343434', font: { family: "'JetBrains Mono', monospace", size: 10 }, stepSize: 5, maxTicksLimit: 8 },
+        border: { color: '#191919' }
+      },
+      y: {
+        grid: { color: 'rgba(25,25,25,0.95)' },
+        ticks: { color: '#343434', font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => fmtK(v) },
+        border: { color: '#191919' }
+      }
+    }
+  }
+});
+
+// Bar renderer
+function renderBars(containerId, items, limit) {
+  const el = $(containerId);
+  if (!items || !items.length) {
+    el.innerHTML = '<div style="color:#343434;padding:16px 0">no data</div>';
+    return;
+  }
+  const top = items.slice(0, limit);
+  const maxAmt = Math.max(...top.map(i => i.amount));
+  top.forEach(item => {
+    const w = maxAmt > 0 ? clamp((item.amount / maxAmt) * 100, 0, 100) : 0;
+    el.innerHTML += `<div class="bar-row">
+      <div class="bar-row-hd">
+        <span class="bar-row-name">${item.label}</span>
+        <span class="bar-row-amt">${fmt(item.amount)}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w.toFixed(1)}%"></div></div>
+    </div>`;
+  });
+}
+
+renderBars('daily-bars', (D.dailyTotals || []).map(d => ({ label: 'day ' + String(d.day).padStart(2, '0'), amount: d.amount })), 14);
+renderBars('cat-bars', (D.categories || []).map(c => ({ label: c.name, amount: c.amount })), 10);
+
+// Transactions table
+let txnData = D.recentTransactions ? [...D.recentTransactions] : [];
+let txnSortCol = 'date';
+let txnSortDir = -1; // -1 desc, 1 asc
+
+function renderTxns() {
+  const tbody = $('txn-body');
+  if (!txnData.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#343434;padding:20px">no transactions</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  txnData.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="dim">${t.date}</td>
+      <td class="trunc">${t.payee || '—'}</td>
+      <td class="dim trunc">${t.category || '—'}</td>
+      <td class="r">${fmt(t.amount)}</td>`;
+    tbody.appendChild(tr);
+  });
+  ['date','payee','category','amount'].forEach(col => {
+    const el = $('sort-' + col);
+    if (el) el.textContent = col === txnSortCol ? (txnSortDir === -1 ? ' ↓' : ' ↑') : '';
+  });
+  $('txn-meta').textContent = 'this month · ' + txnData.length + ' transactions';
+}
+
+function sortTable(col) {
+  if (txnSortCol === col) {
+    txnSortDir *= -1;
+  } else {
+    txnSortCol = col;
+    txnSortDir = col === 'amount' ? -1 : 1;
+  }
+  txnData.sort((a, b) => {
+    let av = a[col] ?? '', bv = b[col] ?? '';
+    if (col === 'amount') { av = Number(av); bv = Number(bv); }
+    else { av = String(av).toLowerCase(); bv = String(bv).toLowerCase(); }
+    if (av < bv) return -txnSortDir;
+    if (av > bv) return txnSortDir;
+    return 0;
+  });
+  renderTxns();
+}
+
+renderTxns();
+
+// Pace
+$('p-avg').textContent = fmt(D.summary.avgDaily);
+$('p-proj').textContent = fmt(D.summary.projectedTotal);
+const vsLast = D.summary.lastMonthTotal > 0
+  ? ((D.summary.projectedTotal - D.summary.lastMonthTotal) / D.summary.lastMonthTotal * 100)
+  : 0;
+$('p-proj-sub').textContent = (vsLast >= 0 ? '+' : '') + vsLast.toFixed(1) + '% vs last month total';
+$('p-proj-bar').style.width = clamp(D.summary.lastMonthTotal > 0 ? (D.summary.projectedTotal / D.summary.lastMonthTotal * 100) : 50, 0, 100) + '%';
+const progPct = D.summary.daysInMonth > 0 ? D.summary.daysElapsed / D.summary.daysInMonth : 0;
+$('p-prog').textContent = (progPct * 100).toFixed(0) + '%';
+$('p-prog-bar').style.width = clamp(progPct * 100, 0, 100) + '%';
+$('p-rem').textContent = D.summary.daysRemaining;
+$('p-rem-sub').textContent = 'of ' + D.summary.daysInMonth + ' days';
+</script>
+</body>
+</html>'''
+
+
+def generate_html_dashboard(
+    input_date: pd.Timestamp,
+    this_month_total: float,
+    cumulative_amount_on_equivalent_day_last_month_val: float,
+    last_month_total_end: float,
+    diff: float,
+    percent_diff: float,
+    current_month_df: pd.DataFrame,
+    last_month_df: pd.DataFrame,
+    full_current_month_df: pd.DataFrame,
+) -> str:
+    days_elapsed = input_date.day
+    days_in_month = input_date.days_in_month
+    days_remaining = days_in_month - days_elapsed
+    avg_daily = this_month_total / days_elapsed if days_elapsed > 0 else 0
+    projected_total = avg_daily * days_in_month
+
+    current_chart = []
+    if not current_month_df.empty and 'day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
+        for _, row in current_month_df.iterrows():
+            if pd.notna(row['day']) and pd.notna(row['cumulative']):
+                current_chart.append({'x': int(row['day']), 'y': round(float(row['cumulative']), 2)})
+
+    last_chart = []
+    if not last_month_df.empty and 'normalized_day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
+        for _, row in last_month_df.iterrows():
+            if pd.notna(row['normalized_day']) and pd.notna(row['cumulative']):
+                last_chart.append({'x': round(float(row['normalized_day']), 2), 'y': round(float(row['cumulative']), 2)})
+
+    future_chart = []
+    if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
+        cutoff = input_date.normalize()
+        future_slice = full_current_month_df[full_current_month_df['date'] > cutoff]
+        if not current_month_df.empty:
+            last_actual = current_month_df.iloc[-1]
+            future_chart.append({'x': int(last_actual['day']), 'y': round(float(last_actual['cumulative']), 2)})
+        for _, row in future_slice.iterrows():
+            if pd.notna(row['day']) and pd.notna(row['cumulative']):
+                future_chart.append({'x': int(row['day']), 'y': round(float(row['cumulative']), 2)})
+
+    has_category = not current_month_df.empty and 'category_name' in current_month_df.columns
+    categories = []
+    if has_category:
+        grp = current_month_df.groupby('category_name', dropna=False)['amount'].sum().sort_values(ascending=False)
+        for cat, amt in grp.items():
+            name = str(cat) if (cat is not None and str(cat) not in ('nan', 'None', '')) else 'uncategorized'
+            categories.append({'name': name, 'amount': round(float(amt), 2)})
+
+    has_payee = not current_month_df.empty and 'payee' in current_month_df.columns
+    recent_txns = []
+    if not current_month_df.empty:
+        for _, row in current_month_df.sort_values('date', ascending=False).iterrows():
+            txn = {
+                'date': row['date'].strftime('%b %d'),
+                'amount': round(float(row['amount']), 2),
+                'payee': str(row['payee']) if has_payee and pd.notna(row.get('payee')) else '',
+                'category': str(row['category_name']) if has_category and pd.notna(row.get('category_name')) and str(row.get('category_name')) not in ('nan', 'None') else '',
+            }
+            recent_txns.append(txn)
+
+    daily_totals = []
+    if not current_month_df.empty and 'day' in current_month_df.columns:
+        grp = current_month_df.groupby('day')['amount'].sum().reset_index().sort_values('amount', ascending=False)
+        for _, row in grp.iterrows():
+            daily_totals.append({'day': int(row['day']), 'amount': round(float(row['amount']), 2)})
+
+    data = {
+        'summary': {
+            'currentMonthTotal': round(this_month_total, 2),
+            'lastMonthEquivalent': round(float(cumulative_amount_on_equivalent_day_last_month_val), 2),
+            'difference': round(float(diff), 2),
+            'percentDiff': round(float(percent_diff), 1),
+            'lastMonthTotal': round(float(last_month_total_end), 2),
+            'daysElapsed': days_elapsed,
+            'daysRemaining': days_remaining,
+            'daysInMonth': days_in_month,
+            'avgDaily': round(avg_daily, 2),
+            'projectedTotal': round(projected_total, 2),
+            'date': input_date.strftime('%Y-%m-%d'),
+            'monthName': input_date.strftime('%B %Y'),
+        },
+        'currentMonthChart': current_chart,
+        'lastMonthChart': last_chart,
+        'futureChart': future_chart,
+        'categories': categories,
+        'recentTransactions': recent_txns,
+        'dailyTotals': daily_totals,
+    }
+
+    return _DASHBOARD_HTML.replace('__DATA_JSON__', json.dumps(data))
+
 
 # This calculation determines a comparable day in the previous month,
 # scaled by the proportion of the current month that has passed.
@@ -416,3 +945,20 @@ plt.savefig(f"{input_date.strftime('%Y-%m-%d')}-cumulative_spending_comparison.p
 
 # Close the plot
 plt.close()
+
+# Save the HTML dashboard
+html_content = generate_html_dashboard(
+    input_date=input_date,
+    this_month_total=this_month_total,
+    cumulative_amount_on_equivalent_day_last_month_val=cumulative_amount_on_equivalent_day_last_month_val,
+    last_month_total_end=last_month_total_end,
+    diff=diff,
+    percent_diff=percent_diff,
+    current_month_df=current_month_df,
+    last_month_df=last_month_df,
+    full_current_month_df=full_current_month_df,
+)
+html_path = f"{input_date.strftime('%Y-%m-%d')}-dashboard.html"
+with open(html_path, 'w', encoding='utf-8') as f:
+    f.write(html_content)
+print(f"Dashboard saved: {html_path}")
