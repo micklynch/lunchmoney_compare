@@ -1,5 +1,6 @@
 *.csv
 *.png
+*.html
 .env
 .ipynb_checkpoints
 venv
