@@ -213,6 +213,20 @@ _DASHBOARD_HTML = r'''<!DOCTYPE html>
   --green: #34d399;
   --blue: #60a5fa;
 }
+body.light {
+  --bg: #f8f8f8;
+  --surface: #ffffff;
+  --border: #e0e0e0;
+  --border-faint: rgba(0,0,0,0.07);
+  --accent: #00866e;
+  --text: #5c5c5c;
+  --text-dim: #b0b0b0;
+  --text-mid: #888888;
+  --text-bright: #1a1a1a;
+  --red: #e03131;
+  --green: #0d8a4e;
+  --blue: #2563eb;
+}
 html, body {
   background: var(--bg);
   color: var(--text);
@@ -317,7 +331,10 @@ footer {
 
 <header>
   <span class="hd-wordmark">spending dashboard</span>
-  <span class="hd-date" id="hd-date"></span>
+  <span style="display:flex;align-items:center;gap:16px;">
+    <button id="theme-toggle" title="Toggle light/dark mode" style="background:none;border:1px solid var(--border);color:var(--text-mid);cursor:pointer;font-size:13px;padding:2px 8px;border-radius:3px;font-family:inherit;line-height:1.7;">◐</button>
+    <span class="hd-date" id="hd-date"></span>
+  </span>
 </header>
 
 <div class="stats">
@@ -422,11 +439,29 @@ footer {
 <script>
 const D = __DATA_JSON__;
 
+// ── Helpers ─────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const fmt = n => '$' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const fmtDiff = n => (n >= 0 ? '+$' : '−$') + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const fmtK = n => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n);
 const clamp = (n, a, b) => Math.min(Math.max(n, a), b);
+
+// ── Theme ────────────────────────────────────────────
+const THEME_KEY = 'lm-dashboard-theme';
+function getTheme() {
+  try {
+    const s = localStorage.getItem(THEME_KEY);
+    if (s === 'light' || s === 'dark') return s;
+  } catch (_) {}
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+let currentTheme = getTheme();
+function applyTheme(t) {
+  currentTheme = t;
+  document.body.classList.toggle('light', t === 'light');
+  try { localStorage.setItem(THEME_KEY, t); } catch (_) {}
+}
+applyTheme(currentTheme);
 
 $('hd-date').textContent = D.summary.date;
 $('ft-date').textContent = 'generated ' + D.summary.date;
@@ -446,101 +481,125 @@ $('s-ltot').textContent = fmt(D.summary.lastMonthTotal);
 $('s-ltot-sub').textContent = 'full month';
 
 // Chart
-const ACCENT = '#00e5c4';
-const LAST_C = '#3b82f6';
-const chartCtx = $('cumulative-chart').getContext('2d');
-const chartDatasets = [
-  {
-    label: 'last month',
-    data: D.lastMonthChart,
-    borderColor: LAST_C,
-    backgroundColor: 'rgba(59,130,246,0.05)',
-    borderWidth: 1.5,
-    pointRadius: 2,
-    pointHoverRadius: 4,
-    fill: true,
-    tension: 0.35,
-  },
-  {
-    label: 'this month',
-    data: D.currentMonthChart,
-    borderColor: ACCENT,
-    backgroundColor: 'rgba(0,229,196,0.06)',
-    borderWidth: 2,
-    pointRadius: 3,
-    pointHoverRadius: 5,
-    fill: true,
-    tension: 0.35,
-  },
-];
-if (D.futureChart && D.futureChart.length > 1) {
-  chartDatasets.push({
-    label: 'projected',
-    data: D.futureChart,
-    borderColor: ACCENT,
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderDash: [4, 5],
-    pointRadius: 0,
-    fill: false,
-    tension: 0.35,
-  });
-}
-new Chart(chartCtx, {
-  type: 'line',
-  data: { datasets: chartDatasets },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
-    interaction: { mode: 'index', intersect: false },
-    animation: { duration: 350 },
-    plugins: {
-      legend: {
-        align: 'end',
-        labels: {
-          color: '#585858',
-          font: { family: "'JetBrains Mono', monospace", size: 10 },
-          boxWidth: 20, padding: 20,
-          usePointStyle: true, pointStyle: 'line',
-        }
-      },
-      tooltip: {
-        backgroundColor: '#0b0b0b',
-        borderColor: '#191919',
-        borderWidth: 1,
-        titleColor: '#585858',
-        bodyColor: '#bebebe',
-        titleFont: { family: "'JetBrains Mono', monospace", size: 10 },
-        bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
-        padding: 12,
-        callbacks: {
-          title: ctx => 'day ' + ctx[0].parsed.x,
-          label: ctx => '  ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y),
-        }
-      }
+function buildChart() {
+  const L = currentTheme === 'light';
+  const ACCENT = '#00e5c4';
+  const LAST_C = '#3b82f6';
+  const gridC   = L ? 'rgba(0,0,0,0.08)' : 'rgba(25,25,25,0.95)';
+  const tickC   = L ? '#a3a3a3'         : '#343434';
+  const axisC   = L ? '#d4d4d4'         : '#191919';
+  const legendC = L ? '#888888'         : '#585858';
+  const ttBg    = L ? '#ffffff'         : '#0b0b0b';
+  const ttBdr   = L ? '#d4d4d4'         : '#191919';
+  const ttTitle = L ? '#888888'         : '#585858';
+  const ttBody  = L ? '#525252'         : '#bebebe';
+
+  // Destroy previous chart instance if it exists
+  const prev = Chart.getChart('cumulative-chart');
+  if (prev) prev.destroy();
+
+  const chartCtx = $('cumulative-chart').getContext('2d');
+  const chartDatasets = [
+    {
+      label: 'last month',
+      data: D.lastMonthChart,
+      borderColor: LAST_C,
+      backgroundColor: 'rgba(59,130,246,0.05)',
+      borderWidth: 1.5,
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      fill: true,
+      tension: 0.35,
     },
-    scales: {
-      x: {
-        type: 'linear', min: 1, max: 31,
-        grid: { color: 'rgba(25,25,25,0.95)' },
-        ticks: { color: '#343434', font: { family: "'JetBrains Mono', monospace", size: 10 }, stepSize: 5, maxTicksLimit: 8 },
-        border: { color: '#191919' }
+    {
+      label: 'this month',
+      data: D.currentMonthChart,
+      borderColor: ACCENT,
+      backgroundColor: 'rgba(0,229,196,0.06)',
+      borderWidth: 2,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      fill: true,
+      tension: 0.35,
+    },
+  ];
+  if (D.futureChart && D.futureChart.length > 1) {
+    chartDatasets.push({
+      label: 'projected',
+      data: D.futureChart,
+      borderColor: ACCENT,
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [4, 5],
+      pointRadius: 0,
+      fill: false,
+      tension: 0.35,
+    });
+  }
+  new Chart(chartCtx, {
+    type: 'line',
+    data: { datasets: chartDatasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+      interaction: { mode: 'index', intersect: false },
+      animation: { duration: 350 },
+      plugins: {
+        legend: {
+          align: 'end',
+          labels: {
+            color: legendC,
+            font: { family: "'JetBrains Mono', monospace", size: 10 },
+            boxWidth: 20, padding: 20,
+            usePointStyle: true, pointStyle: 'line',
+          }
+        },
+        tooltip: {
+          backgroundColor: ttBg,
+          borderColor: ttBdr,
+          borderWidth: 1,
+          titleColor: ttTitle,
+          bodyColor: ttBody,
+          titleFont: { family: "'JetBrains Mono', monospace", size: 10 },
+          bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+          padding: 12,
+          callbacks: {
+            title: ctx => 'day ' + ctx[0].parsed.x,
+            label: ctx => '  ' + ctx.dataset.label + ': ' + fmt(ctx.parsed.y),
+          }
+        }
       },
-      y: {
-        grid: { color: 'rgba(25,25,25,0.95)' },
-        ticks: { color: '#343434', font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => fmtK(v) },
-        border: { color: '#191919' }
+      scales: {
+        x: {
+          type: 'linear', min: 1, max: 31,
+          grid: { color: gridC },
+          ticks: { color: tickC, font: { family: "'JetBrains Mono', monospace", size: 10 }, stepSize: 5, maxTicksLimit: 8 },
+          border: { color: axisC }
+        },
+        y: {
+          grid: { color: gridC },
+          ticks: { color: tickC, font: { family: "'JetBrains Mono', monospace", size: 10 }, callback: v => fmtK(v) },
+          border: { color: axisC }
+        }
       }
     }
-  }
+  });
+}
+
+buildChart();
+
+// ── Theme toggle ──────────────────────────────────────
+$('theme-toggle').addEventListener('click', () => {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  buildChart();
 });
 
 // Bar renderer
 function renderBars(containerId, items, limit) {
   const el = $(containerId);
   if (!items || !items.length) {
-    el.innerHTML = '<div style="color:#343434;padding:16px 0">no data</div>';
+    el.innerHTML = '<div style="color:var(--text-dim);padding:16px 0">no data</div>';
     return;
   }
   const top = items.slice(0, limit);
@@ -568,7 +627,7 @@ let txnSortDir = -1; // -1 desc, 1 asc
 function renderTxns() {
   const tbody = $('txn-body');
   if (!txnData.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#343434;padding:20px">no transactions</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:20px">no transactions</td></tr>';
     return;
   }
   tbody.innerHTML = '';
@@ -645,15 +704,21 @@ def generate_html_dashboard(
 
     current_chart = []
     if not current_month_df.empty and 'day' in current_month_df.columns and 'cumulative' in current_month_df.columns:
-        for _, row in current_month_df.iterrows():
-            if pd.notna(row['day']) and pd.notna(row['cumulative']):
-                current_chart.append({'x': int(row['day']), 'y': round(float(row['cumulative']), 2)})
+        # Group by day, take the final cumulative (max per day) to avoid vertical segments
+        day_groups = current_month_df.groupby('day')['cumulative'].max()
+        for day, cum in day_groups.items():
+            if pd.notna(day) and pd.notna(cum):
+                current_chart.append({'x': int(day), 'y': round(float(cum), 2)})
+        current_chart.sort(key=lambda p: p['x'])
 
     last_chart = []
     if not last_month_df.empty and 'normalized_day' in last_month_df.columns and 'cumulative' in last_month_df.columns:
-        for _, row in last_month_df.iterrows():
-            if pd.notna(row['normalized_day']) and pd.notna(row['cumulative']):
-                last_chart.append({'x': round(float(row['normalized_day']), 2), 'y': round(float(row['cumulative']), 2)})
+        # Group by normalized_day, take the final cumulative per day
+        day_groups = last_month_df.groupby('normalized_day')['cumulative'].max()
+        for nday, cum in day_groups.items():
+            if pd.notna(nday) and pd.notna(cum):
+                last_chart.append({'x': round(float(nday), 2), 'y': round(float(cum), 2)})
+        last_chart.sort(key=lambda p: p['x'])
 
     future_chart = []
     if not full_current_month_df.empty and 'day' in full_current_month_df.columns and 'cumulative' in full_current_month_df.columns:
@@ -662,9 +727,11 @@ def generate_html_dashboard(
         if not current_month_df.empty:
             last_actual = current_month_df.iloc[-1]
             future_chart.append({'x': int(last_actual['day']), 'y': round(float(last_actual['cumulative']), 2)})
-        for _, row in future_slice.iterrows():
-            if pd.notna(row['day']) and pd.notna(row['cumulative']):
-                future_chart.append({'x': int(row['day']), 'y': round(float(row['cumulative']), 2)})
+        if not future_slice.empty:
+            day_groups = future_slice.groupby('day')['cumulative'].max()
+            for day, cum in day_groups.items():
+                if pd.notna(day) and pd.notna(cum):
+                    future_chart.append({'x': int(day), 'y': round(float(cum), 2)})
 
     has_category = not current_month_df.empty and 'category_name' in current_month_df.columns
     categories = []
