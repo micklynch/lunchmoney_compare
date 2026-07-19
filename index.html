@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark light">
+<title>spending dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ambient background -->
+<div class="bg-aurora" aria-hidden="true">
+  <div class="blob blob-a"></div>
+  <div class="blob blob-b"></div>
+  <div class="blob blob-c"></div>
+</div>
+<div class="bg-grain" aria-hidden="true"></div>
+
+<!-- loading overlay -->
+<div id="loading">
+  <div class="loader-inner">
+    <div class="loader-dot"></div>
+    <div class="loader-text">loading dashboard</div>
+    <div class="loader-track"><div class="loader-bar"></div></div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <header class="topbar reveal" style="--i:0">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">spending<em>dashboard</em></span>
+    </div>
+    <div class="topbar-actions">
+      <span class="hd-date" id="hd-date"></span>
+      <button id="refresh-btn" class="icon-btn" title="Refresh data from Lunchmoney" aria-label="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+      </button>
+      <button id="theme-toggle" class="icon-btn theme-btn" title="Toggle light/dark mode" aria-label="Toggle theme">
+        <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- hero stats -->
+    <section class="stats">
+      <div class="stat-card spot reveal" style="--i:1">
+        <div class="stat-lbl">this month</div>
+        <div class="stat-val num" id="s-cur"></div>
+        <div class="stat-sub" id="s-cur-sub"></div>
+      </div>
+      <div class="stat-card spot reveal" style="--i:2">
+        <div class="stat-lbl">last month · equivalent</div>
+        <div class="stat-val num" id="s-leq"></div>
+        <div class="stat-sub" id="s-leq-sub"></div>
+      </div>
+      <div class="stat-card spot reveal" style="--i:3">
+        <div class="stat-lbl">vs last month</div>
+        <div class="stat-val num" id="s-diff"></div>
+        <div class="stat-sub-row">
+          <span class="delta-chip" id="s-diff-chip"></span>
+          <span class="stat-sub" id="s-diff-sub"></span>
+        </div>
+      </div>
+      <div class="stat-card spot reveal" style="--i:4">
+        <div class="stat-lbl">last month · total</div>
+        <div class="stat-val num" id="s-ltot"></div>
+        <div class="stat-sub" id="s-ltot-sub"></div>
+      </div>
+    </section>
+
+    <!-- cumulative chart -->
+    <section class="panel reveal" style="--i:5">
+      <div class="panel-hd">
+        <span class="panel-title">cumulative spending</span>
+        <span class="panel-meta" id="chart-meta"></span>
+      </div>
+      <div class="chart-box">
+        <canvas id="cumulative-chart"></canvas>
+      </div>
+    </section>
+
+    <!-- net worth -->
+    <section class="panel reveal" id="networth-panel" style="--i:6">
+      <div class="panel-hd">
+        <span class="panel-title">net worth</span>
+        <span class="panel-meta" id="nw-meta"></span>
+      </div>
+      <div class="nw-hero">
+        <div class="nw-val num" id="nw-total"></div>
+        <div class="stat-sub-row">
+          <span class="delta-chip" id="nw-chip"></span>
+          <span class="stat-sub" id="nw-sub"></span>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="networth-chart"></canvas>
+      </div>
+    </section>
+
+    <!-- daily + category bars -->
+    <section class="two-col">
+      <div class="panel reveal" style="--i:7">
+        <div class="panel-hd">
+          <span class="panel-title">daily totals</span>
+          <span class="panel-meta">this month · top days</span>
+        </div>
+        <div id="daily-bars" class="bar-list"></div>
+      </div>
+      <div class="panel reveal" style="--i:8">
+        <div class="panel-hd">
+          <span class="panel-title">by category</span>
+          <span class="panel-meta">this month</span>
+        </div>
+        <div id="cat-bars" class="bar-list"></div>
+      </div>
+    </section>
+
+    <!-- day of week -->
+    <section class="panel reveal" style="--i:9">
+      <div class="panel-hd">
+        <span class="panel-title">spending by day of week</span>
+        <span class="panel-meta">this month</span>
+      </div>
+      <div id="dow-chart" class="dow-grid"></div>
+    </section>
+
+    <!-- monthly trend -->
+    <section class="panel reveal" style="--i:10">
+      <div class="panel-hd">
+        <span class="panel-title" id="trend-title">monthly spending · trend</span>
+        <span class="panel-meta" id="trend-meta"></span>
+      </div>
+      <div class="mini-stats">
+        <div class="mini-stat"><span class="mini-lbl">spent</span><span class="mini-val num" id="ts-spent"></span></div>
+        <div class="mini-stat"><span class="mini-lbl">earned</span><span class="mini-val num" id="ts-earned"></span></div>
+        <div class="mini-stat"><span class="mini-lbl">net saved</span><span class="mini-val num" id="ts-saved"></span></div>
+        <div class="mini-stat"><span class="mini-lbl">savings rate</span><span class="mini-val num" id="ts-rate"></span></div>
+      </div>
+      <div class="chart-box tall">
+        <canvas id="trend-chart"></canvas>
+      </div>
+    </section>
+
+    <!-- transactions -->
+    <section class="panel reveal" style="--i:11">
+      <div class="panel-hd">
+        <span class="panel-title">transactions</span>
+        <span class="panel-meta" id="txn-meta">this month</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-col="date">date<span class="sort-ind" id="sort-date">↓</span></th>
+              <th class="sortable" data-col="payee">payee<span class="sort-ind" id="sort-payee"></span></th>
+              <th class="sortable" data-col="category">category<span class="sort-ind" id="sort-category"></span></th>
+              <th class="sortable r" data-col="amount">amount<span class="sort-ind" id="sort-amount"></span></th>
+            </tr>
+          </thead>
+          <tbody id="txn-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- pace & projection -->
+    <section class="panel reveal" style="--i:12">
+      <div class="panel-hd">
+        <span class="panel-title">pace &amp; projection</span>
+      </div>
+      <div class="pace-grid">
+        <div class="pace-card spot">
+          <div class="pace-lbl">avg / day</div>
+          <div class="pace-val num" id="p-avg"></div>
+        </div>
+        <div class="pace-card spot">
+          <div class="pace-lbl">projected total</div>
+          <div class="pace-val num" id="p-proj"></div>
+          <div class="pace-sub" id="p-proj-sub"></div>
+          <div class="pace-sub" id="p-proj-sub2"></div>
+          <div class="prog-track"><div class="prog-fill" id="p-proj-bar"></div></div>
+        </div>
+        <div class="pace-card spot">
+          <div class="pace-lbl">budget items left</div>
+          <div class="pace-val num" id="p-bud"></div>
+          <div class="pace-sub" id="p-bud-sub"></div>
+        </div>
+        <div class="pace-card spot pace-ring-card">
+          <div class="pace-lbl">month progress</div>
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 72 72">
+              <defs>
+                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#2ee6c3"/>
+                  <stop offset="100%" stop-color="#7c8cff"/>
+                </linearGradient>
+              </defs>
+              <circle class="ring-bg" cx="36" cy="36" r="30"/>
+              <circle class="ring-fg" id="p-prog-ring" cx="36" cy="36" r="30" stroke="url(#ringGrad)"/>
+            </svg>
+            <div class="ring-val num" id="p-prog">0%</div>
+          </div>
+        </div>
+        <div class="pace-card spot">
+          <div class="pace-lbl">days remaining</div>
+          <div class="pace-val num" id="p-rem"></div>
+          <div class="pace-sub" id="p-rem-sub"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="reveal" style="--i:13">
+    <span>lunchmoney · spending comparison</span>
+    <span id="ft-date"></span>
+  </footer>
+
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

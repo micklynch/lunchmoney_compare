@@ -7,3 +7,5 @@ venv
 uv.lock
 
 !assets/lunchmoney_compare_example.png
+node_modules/
+dist/

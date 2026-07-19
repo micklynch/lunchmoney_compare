@@ -14,6 +14,18 @@ This is a single-script Python tool that fetches transaction data from the Lunch
 - **Run tests:** `uv run python -m unittest test_comparison`
 - **Run a single test:** `uv run python -m unittest test_comparison.TestCalculateDateBoundaries.test_mid_month`
 
+## Web Dashboard
+
+A Vite + Express web dashboard lives alongside the Python script.
+
+- **Dev mode:** `npm run dev` (Vite dev server + `server.js` API proxy concurrently; Vite proxies `/api` to `localhost:3001`)
+- **Build:** `npm run build` (outputs to `dist/`)
+- **Production:** `npm start` (serves `dist/` and the API on port 3001)
+- **Structure:** `index.html` (markup), `src/style.css` (design system: dark/light themes via CSS custom properties on `body.light`, animations), `src/main.js` (data layer: Lunchmoney fetch + transaction processing; render layer: Chart.js charts, animated counters/bars/ring), `server.js` (Express proxy to the Lunchmoney API, requires `LM_API_KEY`/`LM_HOSTNAME` from `.env`).
+- **API proxy endpoints:** `/api/transactions`, `/api/assets`, `/api/plaid_accounts`, `/api/budgets` (the latter two with `start_date`/`end_date` for transactions/budgets).
+- **Panels (top to bottom):** hero stats → cumulative spending → net worth (current balances from assets + plaid accounts; history estimated by walking backwards through monthly cash flow) → daily totals / by category → day of week → monthly trend (trimmed to months with data; income shown as positive; spent/earned/net saved/savings rate strip) → transactions → pace & projection (budget-aware projection: actuals + remaining budgeted expenses, plus count of unpaid budget items).
+- **Theme:** dark/light toggle persisted to `localStorage`; `?theme=light|dark` URL param overrides for previews/screenshots. Charts are re-rendered on theme change.
+
 ## Architecture
 
 - **Entry point:** `comparison.py` is the entire application. It is designed to be run as a standalone script, not as an installed package.
