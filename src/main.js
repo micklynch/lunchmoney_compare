@@ -82,12 +82,13 @@ async function fetchJSONSafe(url) {
 function computeBudgetSummary(budgetsRaw, inputDate) {
   if (!Array.isArray(budgetsRaw)) return null;
   const monthKey = inputDate.getFullYear() + '-' + String(inputDate.getMonth() + 1).padStart(2, '0') + '-01';
-  let remainingTotal = 0, remainingCount = 0, totalBudget = 0;
+  let remainingTotal = 0, remainingCount = 0, totalBudget = 0, totalBudgetItems = 0;
   budgetsRaw.forEach(b => {
     if (b.is_group || b.is_income || b.exclude_from_budget || b.archived) return;
     const d = b.data && b.data[monthKey];
     const budget = d ? Math.abs(d.budget_to_base ?? d.budget_amount ?? 0) : 0;
     if (budget <= 0) return;
+    totalBudgetItems++;
     const spent = d ? Math.abs(d.spending_to_base ?? 0) : 0;
     totalBudget += budget;
     const rem = Math.max(0, budget - spent);
@@ -98,6 +99,7 @@ function computeBudgetSummary(budgetsRaw, inputDate) {
     remainingTotal: Math.round(remainingTotal * 100) / 100,
     remainingCount,
     totalBudget: Math.round(totalBudget * 100) / 100,
+    totalBudgetItems,
   };
 }
 
@@ -304,6 +306,39 @@ function buildDashboardData(currentMonth, lastMonth, fullCurrentMonth, inputDate
     .map(([name, amount]) => ({ name, amount: Math.round(amount * 100) / 100 }))
     .sort((a, b) => b.amount - a.amount);
 
+  // Last month categories for comparison
+  const lastCatMap = {};
+  lastMonth.forEach(t => {
+    const name = (t.category_name && !['nan', 'None', ''].includes(t.category_name))
+      ? t.category_name : 'uncategorized';
+    lastCatMap[name] = (lastCatMap[name] || 0) + t.amount;
+  });
+  const lastCategories = new Map(
+    Object.entries(lastCatMap).map(([name, amount]) => [name, Math.round(amount * 100) / 100])
+  );
+
+  // Merge: order by this month spend descending
+  const catCompare = categories.map(c => {
+    const lastAmt = lastCategories.get(c.name) || 0;
+    return {
+      name: c.name,
+      thisMonth: c.amount,
+      lastMonth: lastAmt,
+      change: Math.round((c.amount - lastAmt) * 100) / 100,
+    };
+  });
+  // Add categories only present last month
+  lastCategories.forEach((amt, name) => {
+    if (!catCompare.find(c => c.name === name)) {
+      catCompare.push({
+        name,
+        thisMonth: 0,
+        lastMonth: amt,
+        change: Math.round((-amt) * 100) / 100,
+      });
+    }
+  });
+
   // Recent transactions
   const recentTransactions = [...currentMonth]
     .sort((a, b) => b.date - a.date)
@@ -340,6 +375,7 @@ function buildDashboardData(currentMonth, lastMonth, fullCurrentMonth, inputDate
     lastMonthChart: lastChart,
     futureChart,
     categories,
+    catCompare,
     recentTransactions,
     dailyTotals,
   };
@@ -451,12 +487,21 @@ function renderStats(s) {
 
   if (s.hasBudget) {
     const n = s.budgetRemainingCount;
+    const total = s.budgetTotalItems;
     $('p-proj-sub').textContent = 'incl. ' + fmt(s.budgetRemainingTotal) + ' left in ' + n + ' budget item' + (n === 1 ? '' : 's');
-    countUp($('p-bud'), n, v => Math.round(v));
     $('p-bud-sub').textContent = fmt(s.budgetRemainingTotal) + ' left to pay';
+
+    // Budget items left ring: completed / total
+    const completed = total - n;
+    const pct = total > 0 ? completed / total : 0;
+    countUp($('p-bud-ring-val'), n, v => Math.round(v));
+    const C = 2 * Math.PI * 30;
+    requestAnimationFrame(() => {
+      $('p-bud-ring').style.strokeDashoffset = (C * (1 - clamp(pct, 0, 1))).toFixed(2);
+    });
   } else {
     $('p-proj-sub').textContent = 'based on current pace';
-    $('p-bud').textContent = '—';
+    $('p-bud-ring-val').textContent = '—';
     $('p-bud-sub').textContent = 'no budget data';
   }
 
@@ -467,16 +512,7 @@ function renderStats(s) {
     ? (s.projectedTotal / s.lastMonthTotal * 100) : 50, 0, 100);
   requestAnimationFrame(() => { $('p-proj-bar').style.width = projW + '%'; });
 
-  const progPct = s.daysInMonth > 0 ? s.daysElapsed / s.daysInMonth : 0;
-  countUp($('p-prog'), progPct * 100, v => Math.round(v) + '%');
-  const C = 2 * Math.PI * 30;
-  requestAnimationFrame(() => {
-    $('p-prog-ring').style.strokeDashoffset = (C * (1 - clamp(progPct, 0, 1))).toFixed(2);
-  });
-
-  countUp($('p-rem'), s.daysRemaining, v => Math.round(v));
-  $('p-rem-sub').textContent = 'of ' + s.daysInMonth + ' days';
-}
+  }
 
 function buildChart(D) {
   const P = chartPalette();
@@ -774,6 +810,39 @@ function renderBars(containerId, items, limit) {
   });
 }
 
+function renderCategoryCompare(data) {
+  const el = $('cat-compare');
+  if (!data || !data.length) {
+    el.innerHTML = '<div class="bar-empty">no data</div>';
+    return;
+  }
+  el.innerHTML = data.map((c, i) => {
+    const tileMax = Math.max(c.thisMonth, c.lastMonth, 0);
+    const tw = tileMax > 0 ? clamp((c.thisMonth / tileMax) * 100, 0, 100) : 0;
+    const lw = tileMax > 0 ? clamp((c.lastMonth / tileMax) * 100, 0, 100) : 0;
+    const changeCls = c.change === 0 ? '' : (c.change > 0 ? 'up' : 'dn');
+    const changeStr = c.change === 0 ? '—' : (c.change > 0 ? '+$' : '−$') + Math.abs(c.change).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    return `<div class="cc-tile" style="--i:${i}">
+      <div class="cc-tile-hd">
+        <span class="cc-tile-name">${c.name}</span>
+        <span class="cc-tile-change ${changeCls}">${changeStr}</span>
+      </div>
+      <div class="cc-tile-bars">
+        <div class="cc-tile-bar-line">
+          <span class="cc-tile-bar-label">this</span>
+          <div class="cc-tile-track"><div class="cc-tile-fill cc-tile-fill-this" style="--i:${i};width:${tw.toFixed(1)}%"></div></div>
+          <span class="cc-tile-amt">${c.thisMonth ? fmt(c.thisMonth) : '—'}</span>
+        </div>
+        <div class="cc-tile-bar-line">
+          <span class="cc-tile-bar-label">last</span>
+          <div class="cc-tile-track"><div class="cc-tile-fill cc-tile-fill-last" style="--i:${i};width:${lw.toFixed(1)}%"></div></div>
+          <span class="cc-tile-amt">${c.lastMonth ? fmt(c.lastMonth) : '—'}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderDow(items) {
   const el = $('dow-chart');
   if (!items || !items.length) {
@@ -835,8 +904,8 @@ function sortTable(col) {
 }
 
 // ── Data Loading ──────────────────────────────────────
-async function loadData() {
-  const inputDate = new Date();
+async function loadData(dateStr) {
+  const inputDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
   inputDate.setHours(0, 0, 0, 0);
   const boundaries = calculateDateBoundaries(inputDate);
   const { startOfThisMonth, endOfPrevMonth, startOfPrevMonth } = boundaries;
@@ -879,6 +948,7 @@ async function loadData() {
   if (budget) {
     D.summary.budgetRemainingTotal = budget.remainingTotal;
     D.summary.budgetRemainingCount = budget.remainingCount;
+    D.summary.budgetTotalItems = budget.totalBudgetItems;
     D.summary.projectedTotal = Math.round((D.summary.currentMonthTotal + budget.remainingTotal) * 100) / 100;
   }
 
@@ -886,25 +956,19 @@ async function loadData() {
   trendData = trend;
   netWorthData = computeNetWorth(assetsRes, plaidRes, trend);
 
-  $('hd-date').textContent = D.summary.date;
+  $('hd-date-input').value = D.summary.date;
   $('ft-date').textContent = 'generated ' + D.summary.date;
   $('chart-meta').textContent = D.summary.monthName;
 
   renderStats(D.summary);
   buildChart(D);
   renderBars(
-    'daily-bars',
-    (D.dailyTotals || []).map(d => ({ label: 'day ' + String(d.day).padStart(2, '0'), amount: d.amount })),
-    14,
-  );
-  renderBars(
     'cat-bars',
     (D.categories || []).map(c => ({ label: c.name, amount: c.amount })),
     10,
   );
+  renderCategoryCompare(D.catCompare);
   renderTxns(D.recentTransactions);
-
-  renderDow(computeDayOfWeek(currentMonth));
 
   const totalSpent = trend.reduce((s, m) => s + m.spending, 0);
   const totalEarned = trend.reduce((s, m) => s + m.income, 0);
@@ -951,6 +1015,18 @@ async function main() {
       if (dashboardData) buildChart(dashboardData);
       if (trendData) buildTrendChart(trendData);
       if (netWorthData) buildNetWorthChart(netWorthData);
+    });
+
+    $('hd-date-input').addEventListener('change', async () => {
+      const val = $('hd-date-input').value;
+      if (!val) return;
+      const loading = document.getElementById('loading');
+      if (loading) { loading.classList.remove('done'); loading.style.display = ''; }
+      try {
+        await loadData(val);
+      } catch (err) {
+        console.error(err);
+      }
     });
 
     $('refresh-btn').addEventListener('click', async () => {
