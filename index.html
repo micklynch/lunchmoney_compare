@@ -37,7 +37,7 @@
       <span class="brand-name">spending<em>dashboard</em></span>
     </div>
     <div class="topbar-actions">
-      <span class="hd-date" id="hd-date"></span>
+      <input type="date" class="hd-date-input" id="hd-date-input">
       <button id="refresh-btn" class="icon-btn" title="Refresh data from Lunchmoney" aria-label="Refresh data">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
       </button>
@@ -77,8 +77,45 @@
       </div>
     </section>
 
-    <!-- cumulative chart -->
+    <!-- pace & projection -->
     <section class="panel reveal" style="--i:5">
+      <div class="panel-hd">
+        <span class="panel-title">pace &amp; projection</span>
+      </div>
+      <div class="pace-grid">
+        <div class="pace-card spot">
+          <div class="pace-lbl">avg / day</div>
+          <div class="pace-val num" id="p-avg"></div>
+        </div>
+        <div class="pace-card spot">
+          <div class="pace-lbl">projected total</div>
+          <div class="pace-val num" id="p-proj"></div>
+          <div class="pace-sub" id="p-proj-sub"></div>
+          <div class="pace-sub" id="p-proj-sub2"></div>
+          <div class="prog-track"><div class="prog-fill" id="p-proj-bar"></div></div>
+        </div>
+        <div class="pace-card spot pace-ring-card">
+          <div class="pace-lbl">budget items left</div>
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 72 72">
+              <defs>
+                <linearGradient id="budgetRingGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#2ee6c3"/>
+                  <stop offset="100%" stop-color="#7c8cff"/>
+                </linearGradient>
+              </defs>
+              <circle class="ring-bg" cx="36" cy="36" r="30"/>
+              <circle class="ring-fg" id="p-bud-ring" cx="36" cy="36" r="30" stroke="url(#budgetRingGrad)"/>
+            </svg>
+            <div class="ring-val num" id="p-bud-ring-val">0</div>
+          </div>
+          <div class="pace-sub" id="p-bud-sub"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- cumulative chart -->
+    <section class="panel reveal" style="--i:6">
       <div class="panel-hd">
         <span class="panel-title">cumulative spending</span>
         <span class="panel-meta" id="chart-meta"></span>
@@ -89,7 +126,7 @@
     </section>
 
     <!-- net worth -->
-    <section class="panel reveal" id="networth-panel" style="--i:6">
+    <section class="panel reveal" id="networth-panel" style="--i:7">
       <div class="panel-hd">
         <span class="panel-title">net worth</span>
         <span class="panel-meta" id="nw-meta"></span>
@@ -106,31 +143,22 @@
       </div>
     </section>
 
-    <!-- daily + category bars -->
-    <section class="two-col">
-      <div class="panel reveal" style="--i:7">
-        <div class="panel-hd">
-          <span class="panel-title">daily totals</span>
-          <span class="panel-meta">this month · top days</span>
-        </div>
-        <div id="daily-bars" class="bar-list"></div>
-      </div>
-      <div class="panel reveal" style="--i:8">
-        <div class="panel-hd">
-          <span class="panel-title">by category</span>
-          <span class="panel-meta">this month</span>
-        </div>
-        <div id="cat-bars" class="bar-list"></div>
-      </div>
-    </section>
-
-    <!-- day of week -->
-    <section class="panel reveal" style="--i:9">
+    <!-- by category -->
+    <section class="panel reveal" style="--i:8">
       <div class="panel-hd">
-        <span class="panel-title">spending by day of week</span>
+        <span class="panel-title">by category</span>
         <span class="panel-meta">this month</span>
       </div>
-      <div id="dow-chart" class="dow-grid"></div>
+      <div id="cat-bars" class="bar-list"></div>
+    </section>
+
+    <!-- category comparison -->
+    <section class="panel reveal" style="--i:9">
+      <div class="panel-hd">
+        <span class="panel-title">category comparison</span>
+        <span class="panel-meta">this month vs last month</span>
+      </div>
+      <div id="cat-compare" class="cat-compare"></div>
     </section>
 
     <!-- monthly trend -->
@@ -171,55 +199,9 @@
       </div>
     </section>
 
-    <!-- pace & projection -->
-    <section class="panel reveal" style="--i:12">
-      <div class="panel-hd">
-        <span class="panel-title">pace &amp; projection</span>
-      </div>
-      <div class="pace-grid">
-        <div class="pace-card spot">
-          <div class="pace-lbl">avg / day</div>
-          <div class="pace-val num" id="p-avg"></div>
-        </div>
-        <div class="pace-card spot">
-          <div class="pace-lbl">projected total</div>
-          <div class="pace-val num" id="p-proj"></div>
-          <div class="pace-sub" id="p-proj-sub"></div>
-          <div class="pace-sub" id="p-proj-sub2"></div>
-          <div class="prog-track"><div class="prog-fill" id="p-proj-bar"></div></div>
-        </div>
-        <div class="pace-card spot">
-          <div class="pace-lbl">budget items left</div>
-          <div class="pace-val num" id="p-bud"></div>
-          <div class="pace-sub" id="p-bud-sub"></div>
-        </div>
-        <div class="pace-card spot pace-ring-card">
-          <div class="pace-lbl">month progress</div>
-          <div class="ring-wrap">
-            <svg class="ring" viewBox="0 0 72 72">
-              <defs>
-                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#2ee6c3"/>
-                  <stop offset="100%" stop-color="#7c8cff"/>
-                </linearGradient>
-              </defs>
-              <circle class="ring-bg" cx="36" cy="36" r="30"/>
-              <circle class="ring-fg" id="p-prog-ring" cx="36" cy="36" r="30" stroke="url(#ringGrad)"/>
-            </svg>
-            <div class="ring-val num" id="p-prog">0%</div>
-          </div>
-        </div>
-        <div class="pace-card spot">
-          <div class="pace-lbl">days remaining</div>
-          <div class="pace-val num" id="p-rem"></div>
-          <div class="pace-sub" id="p-rem-sub"></div>
-        </div>
-      </div>
-    </section>
-
   </main>
 
-  <footer class="reveal" style="--i:13">
+  <footer class="reveal" style="--i:12">
     <span>lunchmoney · spending comparison</span>
     <span id="ft-date"></span>
   </footer>

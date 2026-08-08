@@ -871,6 +871,150 @@ footer {
   .mini-stat + .mini-stat { padding-left: 16px; }
 }
 
+/* ── date input ──────────────────────────────────────── */
+.hd-date-input {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-mid);
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  outline: none;
+  cursor: pointer;
+  transition: border-color .25s, color .25s, background-color .4s ease;
+  max-width: 150px;
+}
+.hd-date-input:focus,
+.hd-date-input:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.hd-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+  opacity: 0.7;
+}
+.hd-date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+body.light .hd-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.3);
+}
+
+/* ── category comparison tiles ────────────────────────── */
+.cat-compare {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.cc-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: tile-in .45s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  transition: border-color .3s, background-color .4s ease;
+  overflow: hidden;
+}
+.cc-tile:hover { border-color: var(--border-strong); }
+
+@keyframes tile-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.cc-tile-hd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.cc-tile-name {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-tile-change {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.cc-tile-change.up { color: var(--up); }
+.cc-tile-change.dn { color: var(--dn); }
+
+.cc-tile-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cc-tile-bar-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 10px;
+}
+
+.cc-tile-bar-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-dim);
+  width: 20px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.cc-tile-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.cc-tile-fill {
+  height: 100%;
+  border-radius: 3px;
+  transform-origin: left;
+  animation: grow-x .7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms + 80ms);
+}
+
+.cc-tile-fill-this { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.cc-tile-fill-last { background: var(--blue); }
+
+.cc-tile-amt {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-mid);
+  flex-shrink: 0;
+  min-width: 48px;
+  text-align: right;
+}
+
+@media (max-width: 1000px) {
+  .cat-compare { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .cat-compare { grid-template-columns: 1fr; }
+}
+
 /* ── reduced motion ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
