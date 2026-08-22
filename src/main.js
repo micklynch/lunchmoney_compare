@@ -32,6 +32,7 @@ function daysInMonth(year, month) {
 let dashboardData = null;
 let trendData = null;
 let trendChartInstance = null;
+let trendRange = 6;
 let netWorthData = null;
 let netWorthChartInstance = null;
 
@@ -317,7 +318,7 @@ function buildDashboardData(currentMonth, lastMonth, fullCurrentMonth, inputDate
     Object.entries(lastCatMap).map(([name, amount]) => [name, Math.round(amount * 100) / 100])
   );
 
-  // Merge: order by this month spend descending
+  // Merge with last month's amounts for comparison
   const catCompare = categories.map(c => {
     const lastAmt = lastCategories.get(c.name) || 0;
     return {
@@ -338,6 +339,9 @@ function buildDashboardData(currentMonth, lastMonth, fullCurrentMonth, inputDate
       });
     }
   });
+
+  // Order by dollar change vs. last month, highest increase to lowest.
+  catCompare.sort((a, b) => b.change - a.change);
 
   // Recent transactions
   const recentTransactions = [...currentMonth]
@@ -702,6 +706,36 @@ function buildTrendChart(trend) {
   });
 }
 
+function visibleTrend() {
+  if (!trendData) return [];
+  return trendData.slice(-trendRange);
+}
+
+function renderTrend() {
+  const trend = visibleTrend();
+  const totalSpent = trend.reduce((s, m) => s + m.spending, 0);
+  const totalEarned = trend.reduce((s, m) => s + m.income, 0);
+  const totalSaved = totalEarned - totalSpent;
+  const savingsRate = totalEarned > 0 ? (totalSaved / totalEarned) * 100 : null;
+
+  $('trend-title').textContent = 'monthly spending · ' + trend.length + '-month trend';
+  $('trend-meta').textContent = trend.length > 1
+    ? trend[0].label + ' – ' + trend[trend.length - 1].label : '';
+  countUp($('ts-spent'), totalSpent, fmt);
+  countUp($('ts-earned'), totalEarned, fmt);
+  const savedEl = $('ts-saved');
+  savedEl.className = 'mini-val num ' + (totalSaved >= 0 ? 'pos' : 'neg');
+  countUp(savedEl, totalSaved, fmtDiff);
+  const rateEl = $('ts-rate');
+  if (savingsRate !== null) {
+    rateEl.className = 'mini-val num rate';
+    countUp(rateEl, savingsRate, v => v.toFixed(1) + '%');
+  } else {
+    rateEl.textContent = '—';
+  }
+  buildTrendChart(trend);
+}
+
 function buildNetWorthChart(nw) {
   const P = chartPalette();
   const C = P.accent2;
@@ -970,27 +1004,7 @@ async function loadData(dateStr) {
   renderCategoryCompare(D.catCompare);
   renderTxns(D.recentTransactions);
 
-  const totalSpent = trend.reduce((s, m) => s + m.spending, 0);
-  const totalEarned = trend.reduce((s, m) => s + m.income, 0);
-  const totalSaved = totalEarned - totalSpent;
-  const savingsRate = totalEarned > 0 ? (totalSaved / totalEarned) * 100 : null;
-
-  $('trend-title').textContent = 'monthly spending · ' + trend.length + '-month trend';
-  $('trend-meta').textContent = trend.length > 1
-    ? trend[0].label + ' – ' + trend[trend.length - 1].label : '';
-  countUp($('ts-spent'), totalSpent, fmt);
-  countUp($('ts-earned'), totalEarned, fmt);
-  const savedEl = $('ts-saved');
-  savedEl.className = 'mini-val num ' + (totalSaved >= 0 ? 'pos' : 'neg');
-  countUp(savedEl, totalSaved, fmtDiff);
-  const rateEl = $('ts-rate');
-  if (savingsRate !== null) {
-    rateEl.className = 'mini-val num rate';
-    countUp(rateEl, savingsRate, v => v.toFixed(1) + '%');
-  } else {
-    rateEl.textContent = '—';
-  }
-  buildTrendChart(trend);
+  renderTrend();
 
   renderNetWorth(netWorthData);
 
@@ -1007,13 +1021,22 @@ async function main() {
     th.addEventListener('click', () => sortTable(th.dataset.col));
   });
 
+  document.querySelectorAll('#trend-range button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      trendRange = parseInt(btn.dataset.months, 10);
+      document.querySelectorAll('#trend-range button')
+        .forEach(b => b.classList.toggle('active', b === btn));
+      if (trendData) renderTrend();
+    });
+  });
+
   try {
     await loadData();
 
     $('theme-toggle').addEventListener('click', () => {
       applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
       if (dashboardData) buildChart(dashboardData);
-      if (trendData) buildTrendChart(trendData);
+      if (trendData) buildTrendChart(visibleTrend());
       if (netWorthData) buildNetWorthChart(netWorthData);
     });
 
