@@ -165,7 +165,14 @@
     <section class="panel reveal" style="--i:10">
       <div class="panel-hd">
         <span class="panel-title" id="trend-title">monthly spending · trend</span>
-        <span class="panel-meta" id="trend-meta"></span>
+        <div class="panel-hd-right">
+          <div class="seg-control" id="trend-range" role="group" aria-label="trend range">
+            <button type="button" data-months="3">3m</button>
+            <button type="button" data-months="6" class="active">6m</button>
+            <button type="button" data-months="12">12m</button>
+          </div>
+          <span class="panel-meta" id="trend-meta"></span>
+        </div>
       </div>
       <div class="mini-stats">
         <div class="mini-stat"><span class="mini-lbl">spent</span><span class="mini-val num" id="ts-spent"></span></div>
