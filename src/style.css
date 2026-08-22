@@ -83,7 +83,7 @@ body.light {
 body, .panel, .stat-card, .pace-card, .icon-btn, .data-table th, .data-table td,
 .stat-lbl, .stat-sub, .pace-lbl, .pace-sub, .panel-title, .panel-meta, .hd-date,
 .brand-name, .bar-row-name, .bar-row-amt, .dow-label, .dow-amt, footer, .chip,
-.stat-val, .pace-val, .ring-val, .delta-chip {
+.stat-val, .pace-val, .ring-val, .delta-chip, .seg-control, .seg-control button {
   transition: background-color .4s ease, border-color .4s ease, color .4s ease, box-shadow .4s ease;
 }
 
@@ -501,6 +501,48 @@ body.light .theme-btn .ic-moon { transform: translateY(0); opacity: 1; }
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--text-dim);
+}
+
+.panel-hd-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* segmented range selector */
+.seg-control {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.seg-control button {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .04em;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.seg-control button:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.seg-control button.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 /* ── two-column grid ────────────────────────────────── */
