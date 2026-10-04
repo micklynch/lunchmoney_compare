@@ -307,6 +307,22 @@ check('still no runtime errors after navigation', errors.length === 0, errors.sl
   check('retry recovers', d.getElementById('banner').hidden && t('kpi-spend') !== '—', t('kpi-spend'));
 }
 
+/* ── 4. stylesheet invariants ───────────────────────────────────────
+   jsdom has no layout engine, so a misplaced sticky header cannot be caught
+   by inspecting positions. Assert the CSS instead: .table-scroll is a scroll
+   container on both axes, so a thead offset derived from the topbar is
+   resolved against the table itself and shoves the header into the rows. */
+{
+  const css = fs.readFileSync(path.join(root, 'src/style.css'), 'utf8');
+  const thead = css.match(/table\.grid thead th\s*{([^}]*)}/)?.[1] || '';
+  const wrap = css.match(/\.table-scroll\s*{([^}]*)}/)?.[1] || '';
+  check('table header sticks to the table top, not the topbar',
+    /position:\s*sticky/.test(thead) && /top:\s*0\s*;/.test(thead),
+    thead.match(/top:[^;]*;?/)?.[0].trim() || 'no top offset');
+  check('table-scroll wrapper does not scroll vertically',
+    !/overflow-y/.test(wrap), wrap.trim().replace(/\s+/g, ' ').slice(0, 60));
+}
+
 console.log(`\n${report.join('\n')}\n\n${pass}/${pass + fail} checks passed`);
 const unexpected = errors.filter(e => !/simulated outage/.test(e));
 if (unexpected.length) console.log('\nUNEXPECTED ERRORS:\n' + unexpected.join('\n'));
