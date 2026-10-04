@@ -625,12 +625,16 @@ body.light .input[type="search"]::-webkit-search-cancel-button { filter: none; }
 .pill.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
 
 /* ── tables ────────────────────────────────────────────────────────── */
+/* overflow-x alone still makes this a scroll container on both axes (a
+   non-visible x forces overflow-y: visible to compute to auto), so it is the
+   sticky scrollport for anything inside — not the viewport. It never scrolls
+   vertically, so header offsets must be relative to the table's own top edge. */
 .table-scroll { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
 
 table.grid { width: 100%; border-collapse: separate; border-spacing: 0; }
 
 table.grid thead th {
-  position: sticky; top: calc(var(--topbar-h) + var(--status-h));
+  position: sticky; top: 0;
   z-index: 5;
   background: var(--panel);
   font-family: var(--f-mono);
