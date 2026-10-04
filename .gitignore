@@ -9,3 +9,9 @@ uv.lock
 !assets/lunchmoney_compare_example.png
 node_modules/
 dist/
+.claude
+__pycache__/
+*.pyc
+
+# local AI session transcripts (can contain host details / credentials)
+session-*.md

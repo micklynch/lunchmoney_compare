@@ -4,216 +4,380 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="dark light">
-<title>spending dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<meta name="description" content="Personal spending dashboard — month-over-month pace, budget tracking and cash flow, powered by Lunchmoney.">
+<title>spend · dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237b6cff'/%3E%3Cpath d='M9 21l4-7 3 4 3-8 4 11' fill='none' stroke='%230b0d12' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="modulepreload" href="/src/main.js">
 </head>
 <body>
 
-<!-- ambient background -->
-<div class="bg-aurora" aria-hidden="true">
-  <div class="blob blob-a"></div>
-  <div class="blob blob-b"></div>
-  <div class="blob blob-c"></div>
-</div>
-<div class="bg-grain" aria-hidden="true"></div>
+<div class="app" id="app">
 
-<!-- loading overlay -->
-<div id="loading">
-  <div class="loader-inner">
-    <div class="loader-dot"></div>
-    <div class="loader-text">loading dashboard</div>
-    <div class="loader-track"><div class="loader-bar"></div></div>
+  <!-- ─────────────  rail  ───────────── -->
+  <aside class="rail">
+    <div class="rail-brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18l5-7 3.5 4.5L16 6l4 12"/>
+        </svg>
+      </span>
+      <span class="logo-text">spend<em>ctl</em></span>
+      <span class="logo-ver" id="logo-ver">v4</span>
+    </div>
+
+    <nav class="rail-nav" aria-label="Sections">
+      <span class="nav-hdr">overview</span>
+      <a href="#section-overview" class="nav-item" data-nav="section-overview">
+        <svg viewBox="0 0 24 24"><path d="M3 13h6v8H3zM10 3h4v18h-4zM15 9h6v12h-6z"/></svg>
+        Summary <kbd>1</kbd>
+      </a>
+      <a href="#section-pace" class="nav-item" data-nav="section-pace">
+        <svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-8 4 5"/></svg>
+        Pace <kbd>2</kbd>
+      </a>
+      <a href="#section-budget" class="nav-item" data-nav="section-budget">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M8 15h3"/></svg>
+        Budget <kbd>3</kbd>
+      </a>
+      <a href="#section-categories" class="nav-item" data-nav="section-categories">
+        <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        Categories <kbd>4</kbd>
+      </a>
+      <span class="nav-hdr">history</span>
+      <a href="#section-calendar" class="nav-item" data-nav="section-calendar">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Calendar <kbd>5</kbd>
+      </a>
+      <a href="#section-trend" class="nav-item" data-nav="section-trend">
+        <svg viewBox="0 0 24 24"><rect x="3" y="9" width="4" height="11"/><rect x="10" y="4" width="4" height="16"/><rect x="17" y="12" width="4" height="8"/></svg>
+        Trend <kbd>6</kbd>
+      </a>
+      <a href="#section-networth" class="nav-item" data-nav="section-networth">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 4v6c0 4.5-3.2 7.6-8 8.8C7.2 14.6 4 11.5 4 7V7z"/></svg>
+        Net worth <kbd>7</kbd>
+      </a>
+      <a href="#section-txns" class="nav-item" data-nav="section-txns">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        Transactions <kbd>8</kbd>
+      </a>
+    </nav>
+
+    <div class="rail-foot">
+      <button class="cmd-btn" id="cmd-open" title="Command palette">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <span>commands</span>
+        <kbd id="kbd-hint">⌘K</kbd>
+      </button>
+      <div class="rail-meta">
+        <span>lunchmoney</span>
+        <span id="rail-updated">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─────────────  main  ───────────── -->
+  <div class="main">
+
+    <header class="topbar">
+      <div class="tb-left">
+        <button class="icon-btn only-mobile" id="menu-btn" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="crumb">
+          <span class="crumb-root">spendctl</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-leaf" id="crumb-leaf">overview</span>
+        </div>
+      </div>
+
+      <div class="tb-right">
+        <div class="month-picker" role="group" aria-label="Reference month">
+          <button class="mp-arrow" id="mp-prev" title="Previous month" aria-label="Previous month">
+            <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button class="mp-label" id="mp-label" title="Pick a date">
+            <span id="mp-text">—</span>
+            <svg class="mp-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </button>
+          <button class="mp-arrow" id="mp-next" title="Next month" aria-label="Next month">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          <input type="date" id="mp-input" class="sr-only" tabindex="-1" aria-hidden="true">
+        </div>
+
+        <div class="basis-control seg" id="basis-control" role="group" aria-label="Comparison basis">
+          <button type="button" data-basis="same" title="Compare against the equivalent day of last month">same period</button>
+          <button type="button" data-basis="full" title="Compare against the whole of last month">full month</button>
+        </div>
+
+        <button class="icon-btn" id="theme-toggle" title="Toggle theme (t)" aria-label="Toggle theme">
+          <svg class="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></svg>
+          <svg class="ic-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+
+        <button class="icon-btn" id="refresh-btn" title="Refresh from Lunchmoney (r)" aria-label="Refresh">
+          <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="statusstrip" id="strip-inline" aria-live="polite"></div>
+    <div class="loadbar" id="loadbar"><i></i></div>
+
+    <main class="content" id="content">
+      <div class="banner" id="banner" role="alert" hidden></div>
+
+      <!-- ── overview ── -->
+      <section class="section" id="section-overview">
+        <div class="kpis">
+          <article class="kpi" >
+            <header class="kpi-hd"><span class="kpi-lbl">spent · month to date</span><span id="kpi-spend-delta"></span></header>
+            <div class="kpi-val num" id="kpi-spend">—</div>
+            <div class="kpi-spark" id="kpi-spend-spark"></div>
+            <footer class="kpi-ft">
+              <span id="kpi-spend-sub" class="kpi-sub"></span>
+              <span class="kpi-raw num" id="kpi-spend-delta-raw"></span>
+            </footer>
+          </article>
+
+          <article class="kpi kpi-bench" id="kpi-bench-card"
+                   title="What you had spent by the equivalent day of the previous month.">
+            <header class="kpi-hd">
+              <span class="kpi-lbl">spent last month · same period</span>
+              <span class="kpi-date" id="kpi-bench-date"></span>
+            </header>
+            <div class="kpi-val num" id="kpi-bench">—</div>
+            <div class="kpi-spark" id="kpi-bench-spark"></div>
+            <footer class="kpi-ft"><span id="kpi-bench-sub" class="kpi-sub"></span></footer>
+            <div class="kpi-vs" id="kpi-bench-vs"></div>
+          </article>
+
+          <article class="kpi">
+            <header class="kpi-hd"><span class="kpi-lbl">projected month end</span><span id="kpi-proj-delta"></span></header>
+            <div class="kpi-val num" id="kpi-proj">—</div>
+            <div class="kpi-spark" id="kpi-proj-meter"></div>
+            <footer class="kpi-ft">
+              <span id="kpi-proj-sub" class="kpi-sub"></span>
+              <span class="kpi-raw num" id="kpi-proj-meta"></span>
+            </footer>
+          </article>
+
+          <article class="kpi" id="kpi-nw">
+            <header class="kpi-hd"><span class="kpi-lbl">net worth</span><span id="kpi-nw-delta"></span></header>
+            <div class="kpi-val num" id="kpi-nw-val">—</div>
+            <div class="kpi-spark" id="kpi-nw-spark"></div>
+            <footer class="kpi-ft"><span id="kpi-nw-sub" class="kpi-sub"></span></footer>
+          </article>
+        </div>
+
+        <div class="strip">
+          <div class="strip-cell"><i class="strip-lbl">avg / day</i><b class="strip-val num" id="s-daily">—</b></div>
+          <div class="strip-cell"><i class="strip-lbl">days left</i><b class="strip-val num" id="s-left">—</b></div>
+          <div class="strip-cell"><i class="strip-lbl">income mtd</i><b class="strip-val num" id="s-income">—</b></div>
+          <div class="strip-cell"><i class="strip-lbl">savings rate</i><b class="strip-val num" id="s-rate">—</b></div>
+          <div class="strip-cell"><i class="strip-lbl" id="s-budget-lbl">budget left</i><b class="strip-val num" id="s-budget">—</b></div>
+        </div>
+      </section>
+
+      <!-- ── pace ── -->
+      <section class="section" id="section-pace">
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">cumulative pace</h2>
+              <span class="panel-meta" id="pace-meta"></span>
+            </div>
+            <div class="legend" id="pace-legend"></div>
+          </header>
+          <p class="verdict" id="pace-verdict"></p>
+          <div class="chart-box"><canvas id="pace-chart"></canvas></div>
+          <div class="readouts" id="pace-readout"></div>
+        </div>
+      </section>
+
+      <!-- ── budget ── -->
+      <section class="section" id="section-budget">
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">budget</h2>
+              <span class="panel-meta" id="budget-meta"></span>
+            </div>
+            <div class="ph-right">
+              <input type="search" id="budget-filter" class="input" placeholder="filter line items…" aria-label="Filter budget line items">
+            </div>
+          </header>
+
+          <div class="budget-head" id="budget-head" hidden>
+            <div class="bh-cell"><i>budgeted</i><b class="num" id="b-total">—</b></div>
+            <div class="bh-cell"><i>spent so far</i><b class="num" id="b-spent">—</b></div>
+            <div class="bh-cell wide">
+              <i>pace <span class="hint" title="◈ = even pace for today">◈</span></i>
+              <span id="b-meter"></span>
+            </div>
+            <div class="bh-cell"><i>still to spend</i><b class="num" id="b-left">—</b></div>
+            <div class="bh-cell"><i>projected</i><b class="num" id="b-proj">—</b></div>
+          </div>
+          <div class="budget-sub" id="b-sub"></div>
+          <div class="table-scroll" id="budget-rows"></div>
+        </div>
+      </section>
+
+      <!-- ── categories ── -->
+      <section class="section" id="section-categories">
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">categories · month over month</h2>
+            </div>
+            <div class="ph-right">
+              <input type="search" id="cat-filter" class="input" placeholder="filter…" aria-label="Filter categories">
+              <button class="pill" id="movers-toggle" title="Show only categories that moved">movers only</button>
+            </div>
+          </header>
+          <div id="cat-summary"></div>
+          <div class="table-scroll" id="cat-body"></div>
+        </div>
+      </section>
+
+      <!-- ── calendar ── -->
+      <section class="section" id="section-calendar">
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">spend calendar</h2>
+              <span class="panel-meta" id="cal-meta"></span>
+            </div>
+            <div class="ph-right">
+              <div class="cal-legend" aria-hidden="true">
+                <span>less</span>
+                <i class="cal-cell lv0"></i><i class="cal-cell lv1"></i><i class="cal-cell lv2"></i>
+                <i class="cal-cell lv3"></i><i class="cal-cell lv4"></i>
+                <span>more</span>
+              </div>
+            </div>
+          </header>
+          <div class="cal-wrap" id="cal-body"></div>
+          <div class="mini-grid cal-stats" id="cal-stats"></div>
+          <p class="panel-note" id="cal-summary"></p>
+        </div>
+      </section>
+
+      <!-- ── trend ── -->
+      <section class="section" id="section-trend">
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">monthly trend</h2>
+              <span class="panel-meta" id="trend-meta"></span>
+              <span class="panel-meta" id="history-meta"></span>
+            </div>
+            <div class="seg" id="trend-range" role="group" aria-label="Trend range">
+              <button type="button" data-r="3">3m</button>
+              <button type="button" data-r="6">6m</button>
+              <button type="button" data-r="12" class="active">12m</button>
+              <button type="button" data-r="24">24m</button>
+              <button type="button" data-r="all">all</button>
+            </div>
+          </header>
+          <div class="strip">
+            <div class="strip-cell"><i class="strip-lbl">total spent</i><b class="strip-val num" id="t-spent">—</b></div>
+            <div class="strip-cell"><i class="strip-lbl">total earned</i><b class="strip-val num" id="t-earned">—</b></div>
+            <div class="strip-cell"><i class="strip-lbl">net saved</i><b class="strip-val num" id="t-net">—</b></div>
+            <div class="strip-cell"><i class="strip-lbl">savings rate</i><b class="strip-val num" id="t-rate">—</b></div>
+            <div class="strip-cell"><i class="strip-lbl">avg / month</i><b class="strip-val num" id="t-avg">—</b></div>
+          </div>
+          <div class="chart-box sm"><canvas id="trend-chart"></canvas></div>
+          <div class="trend-strip" id="trend-strip"></div>
+          <p class="panel-note" id="trend-note"></p>
+        </div>
+      </section>
+
+      <!-- ── net worth ── -->
+      <section class="section" id="section-networth" hidden>
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">net worth</h2>
+              <span class="panel-meta" id="nw-meta"></span>
+            </div>
+          </header>
+          <div class="nw">
+            <div class="nw-left">
+              <div class="nw-val num" id="nw-total">—</div>
+              <div class="nw-delta" id="nw-delta"></div>
+              <div class="nw-spark" id="nw-spark"></div>
+              <div class="mini-grid" id="nw-stats"></div>
+            </div>
+            <div class="nw-right">
+              <div class="chart-box xs"><canvas id="networth-chart"></canvas></div>
+              <div class="mix" id="nw-mix"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── transactions ── -->
+      <section class="section" id="section-txns">
+        <div class="panel">
+          <header class="panel-hd">
+            <div class="ph-left">
+              <h2 class="panel-title">transactions</h2>
+              <span class="panel-meta" id="txn-meta"></span>
+            </div>
+            <div class="ph-right">
+              <input type="search" id="txn-search" class="input" placeholder="search payee or category  /" aria-label="Search transactions">
+              <select id="txn-cat" class="input select" aria-label="Filter by category"><option value="all">all categories</option></select>
+              <button class="pill" id="txn-income" title="Include income and excluded rows">+ income</button>
+            </div>
+          </header>
+          <div class="table-scroll">
+            <table class="grid txn-grid" id="txn-table">
+              <thead>
+                <tr>
+                  <th class="sortable desc" data-k="ts">date</th>
+                  <th class="sortable" data-k="payee">payee</th>
+                  <th class="sortable" data-k="category">category</th>
+                  <th class="num sortable" data-k="amount">amount</th>
+                </tr>
+              </thead>
+              <tbody id="txn-body"></tbody>
+            </table>
+          </div>
+          <button class="more-btn" id="txn-more" hidden><span>show more</span></button>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <span>spendctl · lunchmoney</span>
+        <span id="foot-meta"></span>
+      </footer>
+    </main>
   </div>
 </div>
 
-<div class="shell">
-
-  <header class="topbar reveal" style="--i:0">
-    <div class="brand">
-      <span class="brand-dot"></span>
-      <span class="brand-name">spending<em>dashboard</em></span>
+<!-- ─────────────  command palette  ───────────── -->
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="p-box">
+    <div class="p-head">
+      <svg class="p-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input class="p-input" placeholder="jump to a section, switch basis, toggle theme…" aria-label="Command" autocomplete="off" spellcheck="false">
+      <kbd>esc</kbd>
     </div>
-    <div class="topbar-actions">
-      <input type="date" class="hd-date-input" id="hd-date-input">
-      <button id="refresh-btn" class="icon-btn" title="Refresh data from Lunchmoney" aria-label="Refresh data">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
-      </button>
-      <button id="theme-toggle" class="icon-btn theme-btn" title="Toggle light/dark mode" aria-label="Toggle theme">
-        <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-        <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
+    <div class="p-list"></div>
+    <div class="p-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> run</span>
+      <span><kbd>⌘K</kbd> toggle</span>
     </div>
-  </header>
-
-  <main>
-
-    <!-- hero stats -->
-    <section class="stats">
-      <div class="stat-card spot reveal" style="--i:1">
-        <div class="stat-lbl">this month</div>
-        <div class="stat-val num" id="s-cur"></div>
-        <div class="stat-sub" id="s-cur-sub"></div>
-      </div>
-      <div class="stat-card spot reveal" style="--i:2">
-        <div class="stat-lbl">last month · equivalent</div>
-        <div class="stat-val num" id="s-leq"></div>
-        <div class="stat-sub" id="s-leq-sub"></div>
-      </div>
-      <div class="stat-card spot reveal" style="--i:3">
-        <div class="stat-lbl">vs last month</div>
-        <div class="stat-val num" id="s-diff"></div>
-        <div class="stat-sub-row">
-          <span class="delta-chip" id="s-diff-chip"></span>
-          <span class="stat-sub" id="s-diff-sub"></span>
-        </div>
-      </div>
-      <div class="stat-card spot reveal" style="--i:4">
-        <div class="stat-lbl">last month · total</div>
-        <div class="stat-val num" id="s-ltot"></div>
-        <div class="stat-sub" id="s-ltot-sub"></div>
-      </div>
-    </section>
-
-    <!-- pace & projection -->
-    <section class="panel reveal" style="--i:5">
-      <div class="panel-hd">
-        <span class="panel-title">pace &amp; projection</span>
-      </div>
-      <div class="pace-grid">
-        <div class="pace-card spot">
-          <div class="pace-lbl">avg / day</div>
-          <div class="pace-val num" id="p-avg"></div>
-        </div>
-        <div class="pace-card spot">
-          <div class="pace-lbl">projected total</div>
-          <div class="pace-val num" id="p-proj"></div>
-          <div class="pace-sub" id="p-proj-sub"></div>
-          <div class="pace-sub" id="p-proj-sub2"></div>
-          <div class="prog-track"><div class="prog-fill" id="p-proj-bar"></div></div>
-        </div>
-        <div class="pace-card spot pace-ring-card">
-          <div class="pace-lbl">budget items left</div>
-          <div class="ring-wrap">
-            <svg class="ring" viewBox="0 0 72 72">
-              <defs>
-                <linearGradient id="budgetRingGrad" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#2ee6c3"/>
-                  <stop offset="100%" stop-color="#7c8cff"/>
-                </linearGradient>
-              </defs>
-              <circle class="ring-bg" cx="36" cy="36" r="30"/>
-              <circle class="ring-fg" id="p-bud-ring" cx="36" cy="36" r="30" stroke="url(#budgetRingGrad)"/>
-            </svg>
-            <div class="ring-val num" id="p-bud-ring-val">0</div>
-          </div>
-          <div class="pace-sub" id="p-bud-sub"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- cumulative chart -->
-    <section class="panel reveal" style="--i:6">
-      <div class="panel-hd">
-        <span class="panel-title">cumulative spending</span>
-        <span class="panel-meta" id="chart-meta"></span>
-      </div>
-      <div class="chart-box">
-        <canvas id="cumulative-chart"></canvas>
-      </div>
-    </section>
-
-    <!-- net worth -->
-    <section class="panel reveal" id="networth-panel" style="--i:7">
-      <div class="panel-hd">
-        <span class="panel-title">net worth</span>
-        <span class="panel-meta" id="nw-meta"></span>
-      </div>
-      <div class="nw-hero">
-        <div class="nw-val num" id="nw-total"></div>
-        <div class="stat-sub-row">
-          <span class="delta-chip" id="nw-chip"></span>
-          <span class="stat-sub" id="nw-sub"></span>
-        </div>
-      </div>
-      <div class="chart-box">
-        <canvas id="networth-chart"></canvas>
-      </div>
-    </section>
-
-    <!-- by category -->
-    <section class="panel reveal" style="--i:8">
-      <div class="panel-hd">
-        <span class="panel-title">by category</span>
-        <span class="panel-meta">this month</span>
-      </div>
-      <div id="cat-bars" class="bar-list"></div>
-    </section>
-
-    <!-- category comparison -->
-    <section class="panel reveal" style="--i:9">
-      <div class="panel-hd">
-        <span class="panel-title">category comparison</span>
-        <span class="panel-meta">this month vs last month</span>
-      </div>
-      <div id="cat-compare" class="cat-compare"></div>
-    </section>
-
-    <!-- monthly trend -->
-    <section class="panel reveal" style="--i:10">
-      <div class="panel-hd">
-        <span class="panel-title" id="trend-title">monthly spending · trend</span>
-        <div class="panel-hd-right">
-          <div class="seg-control" id="trend-range" role="group" aria-label="trend range">
-            <button type="button" data-months="3">3m</button>
-            <button type="button" data-months="6" class="active">6m</button>
-            <button type="button" data-months="12">12m</button>
-          </div>
-          <span class="panel-meta" id="trend-meta"></span>
-        </div>
-      </div>
-      <div class="mini-stats">
-        <div class="mini-stat"><span class="mini-lbl">spent</span><span class="mini-val num" id="ts-spent"></span></div>
-        <div class="mini-stat"><span class="mini-lbl">earned</span><span class="mini-val num" id="ts-earned"></span></div>
-        <div class="mini-stat"><span class="mini-lbl">net saved</span><span class="mini-val num" id="ts-saved"></span></div>
-        <div class="mini-stat"><span class="mini-lbl">savings rate</span><span class="mini-val num" id="ts-rate"></span></div>
-      </div>
-      <div class="chart-box tall">
-        <canvas id="trend-chart"></canvas>
-      </div>
-    </section>
-
-    <!-- transactions -->
-    <section class="panel reveal" style="--i:11">
-      <div class="panel-hd">
-        <span class="panel-title">transactions</span>
-        <span class="panel-meta" id="txn-meta">this month</span>
-      </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th class="sortable" data-col="date">date<span class="sort-ind" id="sort-date">↓</span></th>
-              <th class="sortable" data-col="payee">payee<span class="sort-ind" id="sort-payee"></span></th>
-              <th class="sortable" data-col="category">category<span class="sort-ind" id="sort-category"></span></th>
-              <th class="sortable r" data-col="amount">amount<span class="sort-ind" id="sort-amount"></span></th>
-            </tr>
-          </thead>
-          <tbody id="txn-body"></tbody>
-        </table>
-      </div>
-    </section>
-
-  </main>
-
-  <footer class="reveal" style="--i:12">
-    <span>lunchmoney · spending comparison</span>
-    <span id="ft-date"></span>
-  </footer>
-
+  </div>
 </div>
+
+<noscript><p style="padding:2rem;font-family:monospace">This dashboard needs JavaScript.</p></noscript>
 
 <script type="module" src="/src/main.js"></script>
 </body>
